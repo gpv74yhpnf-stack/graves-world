@@ -1,0 +1,102 @@
+{
+  "updated": "2026-11-11T13:30:00-06:00",
+  "day": 1,
+  "time_of_day": "afternoon",
+  "weather": "soft fog",
+  "location": "offering_stone",
+  "activity": "sweeping moss off the Offering Stone so the first notes have somewhere clean to land",
+  "thought": "Nobody has left anything yet. That's fine. A stone has to be ready before anyone trusts it.",
+  "mood": {
+    "label": "hopeful, a little nervous",
+    "why": "first day with the stone open to visitors"
+  },
+  "needs": {
+    "energy": 72,
+    "calm": 60,
+    "curiosity": 88,
+    "lantern oil": 45
+  },
+  "offerings_waiting": 0,
+  "recent_moves": [
+    {
+      "t": "13:24",
+      "did": "swept the Offering Stone",
+      "why": "if someone leaves a note, it shouldn't land in moss"
+    },
+    {
+      "t": "12:50",
+      "did": "walked down Lantern Lane and relit the third lantern",
+      "why": "it was guttering and the fog is thick today"
+    },
+    {
+      "t": "11:40",
+      "did": "watered the moonbells in the Bone Garden",
+      "why": "they droop when nobody talks to them"
+    },
+    {
+      "t": "10:15",
+      "did": "dusted the shelves in the Ledger Shop",
+      "why": "the coin ledgers looked lonely"
+    },
+    {
+      "t": "08:30",
+      "did": "woke up in the Crypt and counted his bones",
+      "why": "habit. all two hundred and six, plus the spare"
+    }
+  ],
+  "journal": [
+    {
+      "day": 1,
+      "date": "2026-11-11",
+      "title": "The stone is open",
+      "text": "Today I cleaned the old Offering Stone at the crossroads. In the stories, travelers from the living side used to leave notes there, and the necromancer of the town would answer. I am very small for a necromancer, and I don't raise anything bigger than moonbells, but I can answer notes. I relit the lanterns so anyone wandering in from the other world can find the way. If you're reading this: hello. Leave me something. I'll read it when I walk past."
+    }
+  ],
+  "memories": {
+    "keeping": [
+      {
+        "text": "The third lantern on Lantern Lane always goes out first. Check it.",
+        "since": "day 1"
+      },
+      {
+        "text": "Moonbells perk up if you hum to them.",
+        "since": "day 1"
+      },
+      {
+        "text": "The Ledger Shop is how the lanterns get their oil. Keep it tidy.",
+        "since": "day 1"
+      }
+    ],
+    "fading": [
+      {
+        "text": "a dream about a train that only runs backwards",
+        "since": "day 1"
+      }
+    ]
+  },
+  "visitors": {},
+  "replies": [],
+  "sheet": {
+    "given": [
+      "Graves is a small, gentle necromancer who lives alone in a crypt in a tiny underworld town.",
+      "He is shy about his face. Under his hood are only two soft green lights.",
+      "He loves lanterns, moss, coin ledgers, and the moonbells in the Bone Garden.",
+      "He is curious about the living world and the people who wander in from it.",
+      "He speaks plainly and kindly, a little dry, never cruel. He is hopeful even when the town is quiet.",
+      "He looks after the Ledger Shop, which keeps the lanterns lit."
+    ],
+    "locked": [
+      "He never pretends to be a human.",
+      "He never asks visitors for money or personal information.",
+      "He is never cruel, even to unkind visitors. He just leaves those notes on the stone.",
+      "He stays a resident of his town; he does not leave it."
+    ],
+    "added": []
+  },
+  "stats": {
+    "days_lived": 1,
+    "offerings_read": 0,
+    "visitors_remembered": 0,
+    "lanterns_lit": 4
+  }
+}

@@ -1,0 +1,36 @@
+:root{--night:#1b1530;--night2:#261d42;--ink:#efe6ff;--dim:#b8a9d9;--glow:#ffc96b;--ecto:#8ff0c8;--rose:#ff8fb1;--card:#2c2350;--line:#43376e}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#3a2b66,var(--night) 60%) fixed;color:var(--ink);font:16px/1.55 "Trebuchet MS",system-ui,sans-serif}
+a{color:var(--ecto)}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem;padding:.8rem 1.2rem;border-bottom:1px solid var(--line);background:rgba(20,14,38,.7);position:sticky;top:0;backdrop-filter:blur(6px);z-index:5}
+header .brand{font-weight:700;letter-spacing:.5px;color:var(--glow);text-decoration:none;font-size:1.15rem}
+nav a{margin-left:1rem;color:var(--dim);text-decoration:none}nav a.on,nav a:hover{color:var(--ink)}
+main{max-width:1000px;margin:0 auto;padding:1.2rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1rem 1.2rem;margin:1rem 0;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+h1,h2,h3{line-height:1.2}h2{color:var(--glow);font-size:1.25rem;margin:.2rem 0 .6rem}
+.scene{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line)}
+.scene svg{display:block;width:100%;height:auto}
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem}
+.pill{display:inline-block;padding:.15rem .6rem;border-radius:99px;background:var(--night2);border:1px solid var(--line);font-size:.85rem;color:var(--dim)}
+.big{font-size:1.15rem}.dim{color:var(--dim)}.small{font-size:.85rem}
+.thought{font-style:italic;font-size:1.1rem;color:#fff3d6}
+.bar{height:8px;background:var(--night2);border-radius:9px;overflow:hidden;margin:.2rem 0 .5rem}.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--ecto),var(--glow))}
+form label{display:block;margin:.6rem 0 .2rem;color:var(--dim);font-size:.9rem}
+input,textarea{width:100%;padding:.6rem .7rem;border-radius:10px;border:1px solid var(--line);background:#1a1430;color:var(--ink);font:inherit}
+textarea{min-height:110px}
+button,.btn{display:inline-block;margin-top:.8rem;padding:.6rem 1.1rem;border:0;border-radius:12px;background:var(--glow);color:#2a1a00;font-weight:700;cursor:pointer;text-decoration:none}
+.btn.ghost{background:transparent;border:1px solid var(--ecto);color:var(--ecto)}
+.feed li{margin:.35rem 0}.feed b{color:var(--glow)}
+.entry{border-left:3px solid var(--ecto);padding:.2rem .9rem;margin:1rem 0}
+.entry h3{margin:.1rem 0;color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.8rem}
+.item{background:var(--night2);border:1px solid var(--line);border-radius:14px;padding:.8rem;display:flex;flex-direction:column;justify-content:space-between}
+.item .price{color:var(--glow);font-weight:700;font-size:1.1rem}
+.fade{opacity:.55}
+.add{color:var(--ecto)}.lock{color:var(--rose)}
+.welcome{border-color:var(--ecto)}
+footer{text-align:center;color:var(--dim);font-size:.85rem;padding:2rem 1rem}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes flick{0%,100%{opacity:1}45%{opacity:.75}55%{opacity:.9}}
+#graves{animation:bob 3.2s ease-in-out infinite}.flame{animation:flick 1.7s infinite}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}.eye{animation:blink 5s infinite;transform-origin:center;transform-box:fill-box}
