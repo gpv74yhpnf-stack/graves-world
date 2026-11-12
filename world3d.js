@@ -503,7 +503,7 @@ function updateProviderControls(session = null) {
   const isChatGPT = localWorkshop && activeProvider === 'chatgpt';
   connectButton.hidden = !isChatGPT || Boolean(session?.connected && session?.sharing);
   disconnectButton.hidden = !isChatGPT || !Boolean(session?.connected);
-  connectButton.textContent = session?.connected && !session?.sharing ? 'Enable ChatGPT plan use' : 'Connect ChatGPT';
+  connectButton.textContent = session?.connected && !session?.sharing ? 'Review ChatGPT plan access' : 'Continue with ChatGPT';
   connectButton.dataset.reconsent = session?.connected && !session?.sharing ? 'true' : 'false';
   modelRow.hidden = !isChatGPT || !Boolean(session?.sharing) || !chatgptModels.length;
 }
@@ -543,7 +543,7 @@ async function checkBrain(){
         setChatStatus('Signed in, but plan usage is not enabled. OpenAI currently documents Plus and Pro eligibility for open-source plan usage. Choose Enable ChatGPT plan use to review consent, or switch to Local Ollama.','error');
       }else{
         updateProviderControls(session);
-        setChatStatus('ChatGPT is not connected. Choose Connect ChatGPT to open the secure sign-in flow.','error');
+        setChatStatus('ChatGPT is not connected. Choose Continue with ChatGPT to open the secure sign-in flow.','error');
       }
     }catch(e){
       updateProviderControls();
