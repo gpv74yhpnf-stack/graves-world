@@ -2,7 +2,7 @@
 
 ## Goal
 
-Allow the Operator to connect their own ChatGPT account to the locally running Graves World workshop. All sign-in, credential storage, model requests and conversation initiation remain on the Operator's computer. The public GitHub Pages town is not an authentication host and never receives account credentials.
+Allow the Operator to connect their own ChatGPT account to the locally running Graves World workshop. All sign-in, credential storage, model requests and conversation initiation remain on the Operator's computer. The public GitHub Pages town is not an authentication host and never receives account credentials. Its origin is excluded from every ChatGPT sign-in, account and plan-usage endpoint; only the local workshop origin can call those routes.
 
 ## Official integration
 
