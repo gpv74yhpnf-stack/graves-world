@@ -492,6 +492,7 @@ const speakButton = $('#chat-speak-toggle');
 const localWorkshop = ['127.0.0.1','localhost'].includes(location.hostname) && location.port === '8787';
 const chatgptOption = providerSelect.querySelector('option[value="chatgpt"]');
 if(!localWorkshop){
+  $('#proposal-button').title = 'Build proposals are saved only from the private local workshop';
   chatgptOption.disabled = true;
   chatgptOption.textContent = 'ChatGPT account (private workshop only)';
   activeProvider = 'ollama';
@@ -599,7 +600,7 @@ $('#chat-form').addEventListener('submit',async e=>{
     const reply=String(data.reply||'The lantern flickers, but no words came through.').slice(0,5000);
     chatMessages.push({role:'assistant',content:reply});addChatMessage('assistant',reply);
     setChatStatus('Connected · '+(data.model||'local model')+' · '+(data.provider==='chatgpt'?'ChatGPT plan':'local model'),'connected');
-    $('#proposal-button').disabled=false;
+    $('#proposal-button').disabled=!localWorkshop;
     if(speakReplies && 'speechSynthesis' in window){window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(reply);utterance.lang=navigator.language||'en-US';window.speechSynthesis.speak(utterance);}
   }catch(err){chatMessages.pop();chatInput.value=message;setChatStatus(err.message+' Check the selected provider and try again.','error');}
   finally{send.disabled=false;chatInput.focus();}
@@ -612,7 +613,7 @@ $('#chat-clear').addEventListener('click',()=>{
   setChatStatus('Conversation cleared. This session was not saved.');
 });
 $('#proposal-button').addEventListener('click',async()=>{
-  if(!chatMessages.length)return;const button=$('#proposal-button');button.disabled=true;button.textContent='Drafting proposal…';
+  if(!chatMessages.length||!localWorkshop)return;const button=$('#proposal-button');button.disabled=true;button.textContent='Drafting proposal…';
   try{const r=await fetch(brainBase()+'/api/propose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Could not create a proposal.');const p=data.proposal,box=$('#proposal-result');box.hidden=false;box.replaceChildren();const title=document.createElement('h3');title.textContent='Proposal saved to your private vault';const name=document.createElement('p');name.textContent=p.title+' · '+p.kind;const summary=document.createElement('p');summary.textContent=p.summary;const details=document.createElement('p');details.textContent=(p.design_notes||[]).join(' • ');const status=document.createElement('p');status.textContent='Review required · Not applied to the world';box.append(title,name,summary,details,status);setChatStatus('Proposal saved locally for review. Nothing has been published.','connected');}
   catch(err){setChatStatus(err.message,'error');}
   finally{button.disabled=false;button.textContent='✧ Turn this conversation into a build proposal';}
