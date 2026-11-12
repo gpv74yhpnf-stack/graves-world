@@ -51,7 +51,7 @@ The following are foundational and should remain protected by tests and validati
 
 ## 4. Main technical risks and limitations
 
-1. **The brain is outside this repository.** The current site is a renderer and inbox sender, not the autonomous model runner.
+1. **The brain is outside this repository.** The current site is a renderer and inbox sender, not the autonomous model runner. The external runner's identity, prompt, model, and schedule remain unverified.
 2. **Public state.** Issue #1 is public. Names, notes, replies, and memories placed there should be treated as public information.
 3. **Public inbox topic.** The ntfy topic is embedded in client-side JavaScript. Anyone who discovers it may submit unwanted messages. Add server-side validation, rate limiting, moderation, and a rotatable topic before scaling.
 4. **Single-document writes.** Replacing an entire issue body is vulnerable to lost updates if two writers act at once. Add version checks / serialized writes or move canonical state to a database with transactions.
