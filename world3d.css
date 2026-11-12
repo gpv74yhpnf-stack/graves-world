@@ -82,3 +82,5 @@ body.world3d{margin:0;overflow:hidden;background:#0b0816;touch-action:none;overs
 @media(max-width:600px){.provider-row{align-items:stretch}.provider-row select{flex:1;min-width:120px}.provider-row button,.voice-row button{font-size:12px}.voice-row{align-items:stretch}.voice-row button{flex:1}}
 
 .privacy-note{margin:.2rem 0 .55rem;line-height:1.4;max-width:660px}
+
+.plan-note{margin:.15rem 0 .55rem;line-height:1.4;max-width:660px}
