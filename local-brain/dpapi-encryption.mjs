@@ -1,20 +1,20 @@
 import { spawn } from 'node:child_process';
 
-const SCRIPT = String.raw\`
-$ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Security
-$payload = [Console]::In.ReadToEnd() | ConvertFrom-Json
-$bytes = [Convert]::FromBase64String([string]$payload.data)
-$entropy = [Text.Encoding]::UTF8.GetBytes('GravesWorld.ChatGPTCredentials.v1')
-if ($payload.operation -eq 'protect') {
-  $result = [Security.Cryptography.ProtectedData]::Protect($bytes, $entropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)
-} elseif ($payload.operation -eq 'unprotect') {
-  $result = [Security.Cryptography.ProtectedData]::Unprotect($bytes, $entropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)
-} else {
-  throw 'Unsupported DPAPI operation.'
-}
-[Console]::Out.Write([Convert]::ToBase64String($result))
-\`;
+const SCRIPT = [
+  "$ErrorActionPreference = 'Stop'",
+  "Add-Type -AssemblyName System.Security",
+  "$payload = [Console]::In.ReadToEnd() | ConvertFrom-Json",
+  "$bytes = [Convert]::FromBase64String([string]$payload.data)",
+  "$entropy = [Text.Encoding]::UTF8.GetBytes('GravesWorld.ChatGPTCredentials.v1')",
+  "if ($payload.operation -eq 'protect') {",
+  "  $result = [Security.Cryptography.ProtectedData]::Protect($bytes, $entropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)",
+  "} elseif ($payload.operation -eq 'unprotect') {",
+  "  $result = [Security.Cryptography.ProtectedData]::Unprotect($bytes, $entropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)",
+  "} else {",
+  "  throw 'Unsupported DPAPI operation.'",
+  "}",
+  "[Console]::Out.Write([Convert]::ToBase64String($result))",
+].join('\n');
 
 function invokeDpapi(operation, input) {
   if (process.platform !== 'win32') return Promise.reject(new Error('Windows DPAPI is only available on Windows.'));
@@ -30,9 +30,10 @@ function invokeDpapi(operation, input) {
     child.stderr.on('data', chunk => { stderr += chunk; if (stderr.length > 16_000) child.kill(); });
     child.once('error', reject);
     child.once('close', code => {
+      const encoded = stdout.trim();
       if (code !== 0) return reject(new Error('Windows credential protection failed: ' + (stderr.trim().slice(-1200) || 'PowerShell exited with code ' + code)));
-      try { resolve(Buffer.from(stdout.trim(), 'base64')); }
-      catch { reject(new Error('Windows credential protection returned invalid data.')); }
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) return reject(new Error('Windows credential protection returned invalid data.'));
+      resolve(Buffer.from(encoded, 'base64'));
     });
     child.stdin.end(JSON.stringify({ operation, data: Buffer.from(input).toString('base64') }), 'utf8');
   });
