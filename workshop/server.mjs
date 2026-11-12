@@ -28,20 +28,34 @@ async function githubJson(endpoint) {
 async function refresh() {
   const attempted = new Date().toISOString();
   try {
-    const [events, commits, pulls, actions] = await Promise.all([
-      githubJson("events?per_page=30"),
-      githubJson(`commits?sha=${encodeURIComponent(BRANCH)}&per_page=20`),
-      githubJson("pulls?state=all&sort=updated&direction=desc&per_page=20"),
-      githubJson("actions/runs?per_page=15")
-    ]);
+    const endpoints = [
+      "events?per_page=30",
+      `commits?sha=${encodeURIComponent(BRANCH)}&per_page=20`,
+      "pulls?state=all&sort=updated&direction=desc&per_page=20",
+      "actions/runs?per_page=15"
+    ];
+    const results = await Promise.allSettled(endpoints.map(githubJson));
+    const errors = results.flatMap((result, index) => result.status === "rejected"
+      ? [`${endpoints[index]}: ${String(result.reason?.message ?? "unavailable").slice(0, 100)}`]
+      : []);
+    if (results.every(result => result.status === "rejected")) {
+      throw new Error(errors.join("; ").slice(0, 220));
+    }
+    const value = index => results[index].status === "fulfilled" ? results[index].value : [];
+    const actions = value(3);
     const feed = buildFeed({
-      events,
-      commits,
-      pulls,
+      events: value(0),
+      commits: value(1),
+      pulls: value(2),
       workflowRuns: actions.workflow_runs ?? [],
       now: new Date().toISOString()
     });
-    snapshot = { ...feed, status: "connected", last_attempt_at: attempted, error: null };
+    snapshot = {
+      ...feed,
+      status: errors.length ? "partial" : "connected",
+      last_attempt_at: attempted,
+      error: errors.length ? errors.join("; ").slice(0, 240) : null
+    };
   } catch (error) {
     snapshot = {
       ...snapshot,
