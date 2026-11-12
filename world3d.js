@@ -489,10 +489,17 @@ const modelRow = $('#chatgpt-model-row');
 const modelSelect = $('#chatgpt-model');
 const voiceButton = $('#chat-voice');
 const speakButton = $('#chat-speak-toggle');
-
+const localWorkshop = ['127.0.0.1','localhost'].includes(location.hostname) && location.port === '8787';
+const chatgptOption = providerSelect.querySelector('option[value="chatgpt"]');
+if(!localWorkshop){
+  chatgptOption.disabled = true;
+  chatgptOption.textContent = 'ChatGPT account (private workshop only)';
+  activeProvider = 'ollama';
+  localStorage.setItem('graves_provider','ollama');
+}
 providerSelect.value = activeProvider;
 function updateProviderControls(session = null) {
-  const isChatGPT = activeProvider === 'chatgpt';
+  const isChatGPT = localWorkshop && activeProvider === 'chatgpt';
   connectButton.hidden = !isChatGPT || Boolean(session?.connected && session?.sharing);
   disconnectButton.hidden = !isChatGPT || !Boolean(session?.connected);
   connectButton.textContent = session?.connected && !session?.sharing ? 'Enable ChatGPT plan use' : 'Connect ChatGPT';
