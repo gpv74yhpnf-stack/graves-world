@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const REQUIRED = [
   "updated", "day", "time_of_day", "weather", "location", "activity",
@@ -15,8 +16,13 @@ export const LOCKED_RULES = [
 
 const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
 const isString = value => typeof value === "string";
-const isDate = value => isString(value) && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
-const stable = value => JSON.stringify(value, Object.keys(value ?? {}).sort());
+const isDate = value => {
+  if (!isString(value) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+};
+const canonical = value => Array.isArray(value) ? value.map(canonical) : isObject(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+const deepEqual = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 
 export function validateState(state) {
   const errors = [];
@@ -73,7 +79,7 @@ export function validateCharacterInvariants(state) {
 
 export function validateHistoryPreservation(previous, next) {
   const errors = [];
-  const contains = (list, item) => Array.isArray(list) && list.some(candidate => JSON.stringify(candidate) === JSON.stringify(item));
+  const contains = (list, item) => Array.isArray(list) && list.some(candidate => deepEqual(candidate, item));
   for (const entry of previous?.journal ?? []) if (!contains(next?.journal, entry)) errors.push(`journal entry lost or changed: ${entry.title ?? "(untitled)"}`);
   for (const entry of previous?.replies ?? []) if (!contains(next?.replies, entry)) errors.push(`visitor reply lost or changed: ${entry.to ?? "(unknown visitor)"}`);
   for (const [key, oldVisitor] of Object.entries(previous?.visitors ?? {})) {
@@ -97,7 +103,7 @@ export function validateUpdate(previous, next) {
   ];
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const file = process.argv[2];
   if (!file) {
     console.error("Usage: node scripts/state-contract.mjs <state.json>");
