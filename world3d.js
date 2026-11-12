@@ -540,7 +540,7 @@ async function checkBrain(){
       }else if(session.connected){
         chatgptModels=[];
         updateProviderControls(session);
-        setChatStatus('Signed in, but ChatGPT plan usage has not been authorized. Choose Enable ChatGPT plan use to review that permission.','error');
+        setChatStatus('Signed in, but plan usage is not enabled. OpenAI currently documents Plus and Pro eligibility for open-source plan usage. Choose Enable ChatGPT plan use to review consent, or switch to Local Ollama.','error');
       }else{
         updateProviderControls(session);
         setChatStatus('ChatGPT is not connected. Choose Connect ChatGPT to open the secure sign-in flow.','error');
