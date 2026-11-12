@@ -21,6 +21,7 @@ const PLACES = {
   offering_stone: { name:"The Offering Stone", pos:new THREE.Vector3(1,0,9),     stand:new THREE.Vector3(-2.6,0,10.6), ring:new THREE.Vector3(1.4,0,12.2),   r:2.4, open:"Leave an offering" },
   bone_garden:    { name:"The Bone Garden",    pos:new THREE.Vector3(13,0,0),    stand:new THREE.Vector3(12,0,3),     ring:new THREE.Vector3(13,0,4.6),   r:2.4, open:"Read his letters" },
   ledger_shop:    { name:"The Ledger Shop",    pos:new THREE.Vector3(25,0,-8),   stand:new THREE.Vector3(22,0,-3.4),  ring:new THREE.Vector3(25,0,-2.4),  r:2.4, open:"Browse the shop" },
+  grand_library:  { name:"The Grand Library",  pos:new THREE.Vector3(0,0,-25),   stand:new THREE.Vector3(0,0,-16.8), ring:new THREE.Vector3(0,0,-14.8), r:2.6, open:"Enter the Grand Library" },
 };
 const KEYS = Object.keys(PLACES);
 const solids = []; // {x,z,r} simple circle colliders
@@ -157,6 +158,76 @@ function shop(){
   add(new THREE.BoxGeometry(.9, .15, .65), MAT.paper, 3.9, 1.2, 2.2, g); add(new THREE.CylinderGeometry(.08, .1, 1.1, 6), MAT.wood, 3.9, .55, 2.2, g);
   solids.push({ x: p.x, z: p.z, r: 4.3 });
 }
+// The Grand Library: a moonstone scriptorium with twin lantern towers, a rose window,
+ // deep-blue roofs and a welcoming, illuminated doorway. All geometry is original.
+const libraryMotes = [];
+function grandLibrary(){
+  const p = PLACES.grand_library.pos, g = new THREE.Group(); g.position.copy(p); scene.add(g);
+  const blueStone = M(0x35466f), paleStone = M(0x7783a8), blueRoof = M(0x26365f), darkGlass = M(0x101a36);
+  const windowGlow = glow(0x8eb7ff, 2.1), goldGlow = glow(0xffd58a, 2.4);
+  // broad foundation and central hall
+  add(new THREE.BoxGeometry(17, .7, 13), MAT.stoneDark, 0, .35, 0, g);
+  add(new THREE.BoxGeometry(12, 8.5, 9), blueStone, 0, 4.85, 0, g);
+  add(new THREE.BoxGeometry(5, 5.8, 8), MAT.stone, -7.4, 3.5, -.3, g);
+  add(new THREE.BoxGeometry(5, 5.8, 8), MAT.stone, 7.4, 3.5, -.3, g);
+  // high central roof and two lower side roofs
+  const roof = add(new THREE.ConeGeometry(8.4, 6.2, 4), blueRoof, 0, 12.1, 0, g); roof.rotation.y = Math.PI / 4; roof.scale.z = .82;
+  for (const x of [-7.4, 7.4]) { const r = add(new THREE.ConeGeometry(3.8, 2.8, 4), MAT.roof, x, 7.1, -.2, g); r.rotation.y = Math.PI / 4; }
+  // entrance porch, arch and double doors
+  add(new THREE.BoxGeometry(4.4, .35, 3.2), MAT.stoneDark, 0, .25, 6.05, g);
+  for (const x of [-2.05, 2.05]) {
+    add(new THREE.CylinderGeometry(.24, .3, 5.6, 8), paleStone, x, 3.05, 4.35, g);
+    add(new THREE.SphereGeometry(.32, 8, 6), MAT.bone, x, 5.9, 4.35, g);
+  }
+  add(new THREE.BoxGeometry(4.6, .35, .5), paleStone, 0, 5.9, 4.35, g);
+  add(new THREE.BoxGeometry(2.8, 3.8, .22), darkGlass, 0, 2.25, 4.58, g);
+  add(new THREE.BoxGeometry(1.3, 3.2, .12), M(0x18213d), -.68, 2.15, 4.72, g);
+  add(new THREE.BoxGeometry(1.3, 3.2, .12), M(0x18213d), .68, 2.15, 4.72, g);
+  add(new THREE.SphereGeometry(.12, 8, 6), goldGlow, 0, 2.1, 4.82, g);
+  // stained-glass lancet windows along the nave
+  for (const x of [-4.4, 4.4]) {
+    for (const z of [-2.6, 1.1]) {
+      add(new THREE.BoxGeometry(1.15, 3.2, .16), darkGlass, x, 4.8, z + 4.58, g);
+      add(new THREE.BoxGeometry(.12, 3.35, .2), paleStone, x, 4.8, z + 4.68, g);
+      add(new THREE.BoxGeometry(1.2, .12, .2), paleStone, x, 4.8, z + 4.68, g);
+      add(new THREE.BoxGeometry(.07, 3, .22), windowGlow, x, 4.8, z + 4.72, g);
+    }
+  }
+  // rose window above the doors
+  const rose = new THREE.Group(); rose.position.set(0, 7.1, 4.62); g.add(rose);
+  add(new THREE.CircleGeometry(1.18, 12), windowGlow, 0, 0, 0, rose);
+  for (let i=0;i<8;i++){ const a=i*Math.PI/4; const petal=add(new THREE.SphereGeometry(.25,8,6), i%2?MAT.lilac:goldGlow, Math.cos(a)*.72,Math.sin(a)*.72,.04,rose); petal.scale.set(.7,1.5,.35); }
+  add(new THREE.TorusGeometry(1.28,.12,8,32), paleStone, 0, 0, .08, rose);
+  // paired towers and needle spires
+  for (const x of [-6.7,6.7]) {
+    add(new THREE.BoxGeometry(2.5, 10, 2.7), blueStone, x, 5.3, 3.1, g);
+    add(new THREE.CylinderGeometry(1.35,1.5,2.2,8), paleStone, x, 10.7, 3.1, g);
+    const spire=add(new THREE.ConeGeometry(1.65,5.5,8), blueRoof, x, 14.4, 3.1, g);
+    add(new THREE.SphereGeometry(.16,8,6), goldGlow, x, 17.25, 3.1, g);
+    spire.rotation.y=Math.PI/8;
+    add(new THREE.BoxGeometry(.72,2.1,.18), windowGlow, x, 5.8, 4.48, g);
+  }
+  // carved buttresses and foundation runes
+  for (const x of [-5.6,5.6]) {
+    for (const z of [-3.7,3.7]) {
+      const buttress=add(new THREE.BoxGeometry(.7,7.4,.8), paleStone, x, 4.1, z, g);
+      buttress.rotation.z=x<0?-.08:.08;
+    }
+  }
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(5.8,1.05), new THREE.MeshStandardMaterial({map:textTexture('THE GRAND LIBRARY',768,160,'#dce8ff','#172440'),emissive:0x8eb7ff,emissiveMap:textTexture('THE GRAND LIBRARY',768,160,'#dce8ff','#172440'),emissiveIntensity:.7}));
+  sign.position.set(0,8.65,4.72); g.add(sign);
+  const L=new THREE.PointLight(0x8eb7ff,7,24,1.5); L.position.set(0,7,6); g.add(L); flickers.push({light:L,base:7,ph:2.4});
+  const warm=new THREE.PointLight(0xffc96b,4,13,1.7); warm.position.set(0,3,5.5); g.add(warm); flickers.push({light:warm,base:4,ph:5.2});
+  // a little constellation of turning book-shaped relics above the entrance
+  for(let i=0;i<5;i++){
+    const book=new THREE.Group(); book.position.set((i-2)*1.05,8.9+Math.sin(i*1.7)*.45,7.2+(i%2)*.45); g.add(book);
+    const cover=add(new THREE.BoxGeometry(.55,.72,.12),i%2?MAT.roof:blueRoof,0,0,0,book);
+    add(new THREE.BoxGeometry(.43,.62,.035),MAT.paper,0,0,.075,book);
+    const sigil=add(new THREE.BoxGeometry(.12,.18,.02),goldGlow,0,0,.1,book);
+    libraryMotes.push({book,phase:i*1.3,speed:.35+i*.06});
+  }
+  solids.push({x:p.x,z:p.z,r:7.4});
+}
 const stoneNote = new THREE.Group();
 function offeringStone(){
   const p = PLACES.offering_stone.pos, g = new THREE.Group(); g.position.copy(p); scene.add(g);
@@ -199,9 +270,17 @@ function gravestone(x, z){ const g = new THREE.Group(); g.position.set(x, 0, z);
   else { add(new THREE.BoxGeometry(.16, 1.3, .16), MAT.stone, 0, .65, 0, g); add(new THREE.BoxGeometry(.7, .16, .16), MAT.stone, 0, .95, 0, g); }
   solids.push({ x, z, r: .5 }); }
 
-crypt(); shop(); offeringStone(); boneGarden();
+crypt(); shop(); offeringStone(); boneGarden(); grandLibrary();
+ // a processional cobble walk draws the eye from the old square to the new archive
+{
+  const geo=new THREE.CylinderGeometry(.34,.38,.1,6), inst=new THREE.InstancedMesh(geo,MAT.stoneDark,110), d=new THREE.Object3D(); let n=0;
+  for(let z=-14.5;z<2.5;z+=.62) for(let x of [-.72,0,.72]){
+    d.position.set(x,.045,z+(rnd()-.5)*.16); d.rotation.y=rnd()*2; d.scale.setScalar(.78+rnd()*.3); d.updateMatrix(); inst.setMatrixAt(n++,d.matrix);
+  }
+  inst.count=n; inst.receiveShadow=true; scene.add(inst);
+}
 [[-20, 4.3], [-15, 6], [-10, 6.6], [-5, 6.2], [-17, -.8], [-7, -.6], [6, 6.5], [17, 6], [20, -1]].forEach(([x, z], i) => lamp(x, z, 3.2, QUALITY > 0 ? i % 2 === 0 : i % 4 === 0));
-[[-31, -2], [-30, 9], [-18, -12], [-6, -9], [5, -10], [8, 16], [-8, 15], [19, 12], [32, 4], [31, -16], [-34, -16], [0, -16], [-22, 14], [26, 12]].forEach(([x, z]) => deadTree(x, z, .8 + rnd() * .6));
+[[-31, -2], [-30, 9], [-18, -12], [-6, -9], [5, -10], [8, 16], [-8, 15], [19, 12], [32, 4], [31, -16], [-34, -16], [8, -19], [-22, 14], [26, 12]].forEach(([x, z]) => deadTree(x, z, .8 + rnd() * .6));
 for (let i = 0; i < 16; i++){ const x = -30 + rnd() * 14, z = -16 + rnd() * 6; if (Math.hypot(x - PLACES.crypt.pos.x, z - PLACES.crypt.pos.z) > 5) gravestone(x, z); }
 for (let i = 0; i < 8; i++){ gravestone(-4 + rnd() * 10, -6 - rnd() * 5); }
 // distant spires for silhouette
@@ -470,6 +549,7 @@ function frame(now){
   emGeo.attributes.position.needsUpdate = true;
   for (const m of mists){ m.s.position.x += m.v * dt; if (m.s.position.x > 35) m.s.position.x = -35; }
   for (const f of flowers){ f.m.position.y = f.y + Math.sin(T * 1.5 + f.ph) * .04; }
+  for (const b of libraryMotes){ b.book.rotation.y = Math.sin(T*.65+b.phase)*.35; b.book.position.y = 8.9 + Math.sin(T*.8+b.phase)*.32; }
   for (const k of KEYS){ const r = rings[k]; const here = STATE && STATE.location === k; r.material.opacity = (k === nearPlace ? .9 : .35 + Math.sin(T * 2 + k.length) * .15); r.material.color.set(here ? 0x8ff0c8 : 0xffc96b); r.scale.setScalar(1 + Math.sin(T * 2) * .04); }
   stoneNote.rotation.y += dt * .4;
   // HTML overlays
