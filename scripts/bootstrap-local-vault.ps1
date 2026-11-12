@@ -21,21 +21,15 @@ if ($LASTEXITCODE -ne 0) { throw "Could not run Node.js." }
 New-Item -ItemType Directory -Force -Path $VaultPath | Out-Null
 $VaultPath = (Resolve-Path -LiteralPath $VaultPath).Path
 Assert-OutsideRepository $VaultPath $RepositoryRoot
-# Restrict inherited NTFS access to the current Windows account.
+# Restrict inherited NTFS access using icacls.exe. This avoids Set-Acl's
+# SACL handling, which can require SeSecurityPrivilege in some Windows sessions.
 # This is access control, not encryption. Enable BitLocker/device encryption separately.
-$currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User
-$acl = Get-Acl -LiteralPath $VaultPath
-$acl.SetAccessRuleProtection($true, $false)
-foreach ($existingRule in @($acl.Access)) { [void]$acl.RemoveAccessRuleSpecific($existingRule) }
-$rule = New-Object Security.AccessControl.FileSystemAccessRule(
-  $currentSid,
-  [Security.AccessControl.FileSystemRights]::FullControl,
-  ([Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit),
-  [Security.AccessControl.PropagationFlags]::None,
-  [Security.AccessControl.AccessControlType]::Allow
-)
-$acl.AddAccessRule($rule)
-Set-Acl -LiteralPath $VaultPath -AclObject $acl
+$icacls = Join-Path $env:SystemRoot 'System32\icacls.exe'
+if (-not (Test-Path -LiteralPath $icacls -PathType Leaf)) { throw "icacls.exe was not found: $icacls" }
+$currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$grant = "*${currentSid}:(OI)(CI)F"
+& $icacls $VaultPath '/inheritance:r' '/grant:r' $grant
+if ($LASTEXITCODE -ne 0) { throw "icacls could not secure the vault directory (exit $LASTEXITCODE). No snapshot was imported." }
 $exports = Join-Path $VaultPath "imports"
 New-Item -ItemType Directory -Force -Path $exports | Out-Null
 $issueExport = Join-Path $exports "issue-1-current.json"
