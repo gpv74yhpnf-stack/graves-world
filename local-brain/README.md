@@ -17,9 +17,16 @@ This local bridge lets the hosted 3D town talk to an Ollama model running on **y
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\local-brain\start.ps1
    ```
-3. Leave that terminal open. Visit the [3D world](https://gpv74yhpnf-stack.github.io/graves-world/) on the **same computer** and press **Talk**.
+3. For the ChatGPT-connected private workshop, install the official connector once:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\local-brain\install-chatgpt-sdk.ps1
+   ```
+4. Leave the bridge terminal open and visit **http://127.0.0.1:8787/** on the same computer. This is your private local copy of the 3D town. Press **Talk**.
+5. Choose **ChatGPT account**, then **Connect ChatGPT**. Sign in through the browser and review the separate permission to use your ChatGPT plan. You can also choose **Local Ollama** at any time.
 
-The bridge listens only on 127.0.0.1:8787. Ollama is expected at 127.0.0.1:11434. To use another model, set $env:OLLAMA_MODEL before running the start script.
+The bridge listens only on 127.0.0.1:8787 and serves the local 3D site from the repository folder. Ollama is expected at 127.0.0.1:11434. To use another local model, set $env:OLLAMA_MODEL before running the start script.
+
+The ChatGPT connector uses OpenAI's official Sign in with ChatGPT local SDK. It stores OAuth credentials in the private Graves vault using Windows DPAPI CurrentUser protection. The ChatGPT plan permission is separate from identity sign-in and is optional. Usage and model access depend on the permissions and limits shown by your account. The SDK is downloaded to the private vault rather than copied into this repository. See [the connector privacy and license notes](../docs/chatgpt-local-connection-v1.md).
 
 ## What works
 - In-world chat with the local Ollama model.
@@ -32,6 +39,7 @@ The bridge listens only on 127.0.0.1:8787. Ollama is expected at 127.0.0.1:11434
 - A proposal is saved locally for review. It does not edit source code, publish to GitHub, alter Graves' live mind, or change the public town.
 - The private vault bootstrap currently sets Windows folder access controls; it does not itself encrypt the vault. Use Windows Device Encryption/BitLocker and an encrypted backup for stronger protection.
 - The bridge binds to loopback and checks browser origins. Do not change it to listen on 0.0.0.0 or expose port 8787 to the internet.
+- The official Sign in with ChatGPT DevKit currently has a noncommercial license. This connector is for personal learning and experimentation only. Do not use it for business operations or a commercial Graves World product without separate written rights from OpenAI.
 - Visitor messages and world context are untrusted. The model cannot perform privileged actions through this bridge.
 - This is the first conversation bridge, not yet a full autonomous world editor.
 
@@ -39,4 +47,5 @@ The bridge listens only on 127.0.0.1:8787. Ollama is expected at 127.0.0.1:11434
 - If Ollama is unavailable, open the Ollama app and run ollama list.
 - If the model is missing, run ollama pull qwen3.5:4b.
 - Keep the PowerShell bridge window open.
-- If the browser blocks the local connection, use the official HTTPS GitHub Pages site and check that the bridge is running.
+- If the local site does not load, check that the bridge terminal is still running and open exactly http://127.0.0.1:8787/.
+- If the SDK is missing, run the installer command above. If sign-in succeeds but plan usage is disabled, choose the separate enable-permission action and review the consent screen.
