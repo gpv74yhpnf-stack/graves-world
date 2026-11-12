@@ -1,6 +1,6 @@
 const cleanText = (value, max = 180) => String(value ?? "")
-  .replace(/[\\u0000-\\u001f\\u007f]/g, " ")
-  .replace(/\\s+/g, " ")
+  .replace(/[\u0000-\u001f\u007f]/g, " ")
+  .replace(/\s+/g, " ")
   .trim()
   .slice(0, max);
 
@@ -34,7 +34,7 @@ export function normalizeRepositoryEvents(events = []) {
     const common = { timestamp: event.created_at, id: event.id };
     switch (event.type) {
       case "PushEvent": {
-        const branch = cleanText(String(payload.ref ?? "").replace(/^refs\\/heads\\//, ""), 100);
+        const branch = cleanText(String(payload.ref ?? "").replace(/^refs\/heads\//, ""), 100);
         const commits = Array.isArray(payload.commits) ? payload.commits : [];
         const message = commits.length ? cleanText(commits[0]?.message, 160) : "Repository push";
         return [item({ ...common, kind: "push", title: `Push to ${branch || "branch"}`, detail: [actor, message].filter(Boolean).join(" · "), url: `https://github.com/${repo}/commits/${encodeURIComponent(branch)}`, status: "success" })];
@@ -66,7 +66,7 @@ export function normalizeCommits(commits = []) {
   return commits.map(commit => item({
     id: `commit:${commit.sha}`,
     kind: "commit",
-    title: cleanText(commit.commit?.message?.split("\\n")[0], 160) || "Commit",
+    title: cleanText(commit.commit?.message?.split("\n")[0], 160) || "Commit",
     detail: [cleanText(commit.commit?.author?.name, 60), commit.sha?.slice(0, 8)].filter(Boolean).join(" · "),
     timestamp: commit.commit?.author?.date ?? commit.commit?.committer?.date,
     url: commit.html_url,
