@@ -16,7 +16,7 @@ const mimeTypes={'.html':'text/html; charset=utf-8','.js':'text/javascript; char
 async function serveStatic(req,res,url){
  if(!['GET','HEAD'].includes(req.method))return false;
  let pathname;try{pathname=decodeURIComponent(url.pathname)}catch{return false;}
- if(pathname.includes('\\0'))return false;
+ if(pathname.includes(String.fromCharCode(0)))return false;
  if(pathname==='/')pathname='/index.html';
  let target=path.resolve(projectRoot,'.'+pathname);
  if(target!==projectRoot&&!target.startsWith(projectRoot+path.sep))return false;
