@@ -56,7 +56,7 @@ if (-not $SkipLiveIssue) {
   try { $stateObject = $jsonText | ConvertFrom-Json -ErrorAction Stop }
   catch { throw "Issue #1 body is not standalone JSON. Nothing was imported. Inspect the issue body manually." }
   if (-not $stateObject.updated -or -not $stateObject.character) { throw "Issue #1 JSON does not resemble a Graves state snapshot. Nothing was imported." }
-  $jsonText | Set-Content -LiteralPath $issueExport -Encoding UTF8
+  [IO.File]::WriteAllText($issueExport, $jsonText, (New-Object System.Text.UTF8Encoding($false)))
   $snapshotArgs += @("--snapshot", "live-issue-current=$issueExport")
 } else {
   Write-Warning "Skipped live Issue #1 export. Only repository state.json will be imported."
