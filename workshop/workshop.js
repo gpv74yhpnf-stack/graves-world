@@ -7,12 +7,12 @@ const notice = document.querySelector("#feed-notice");
 const count = document.querySelector("#item-count");
 
 function setConnection(status, error = null) {
-  const online = status === "connected";
+  const online = status === "connected" || status === "partial";
   liveDot.className = `live-dot ${online ? "online" : status === "offline" ? "offline" : ""}`;
   statusText.textContent = status.toUpperCase();
-  connectionLabel.textContent = online ? "LIVE REPOSITORY FEED" : status === "stale" ? "FEED STALE · RETRYING" : "CONNECTING TO REPOSITORY";
+  connectionLabel.textContent = status === "connected" ? "LIVE REPOSITORY FEED" : status === "partial" ? "PARTIAL REPOSITORY FEED" : status === "stale" ? "FEED STALE · RETRYING" : "CONNECTING TO REPOSITORY";
   notice.className = error ? "notice error" : "notice";
-  notice.textContent = error || (online ? "Streaming public repository activity. New snapshots arrive about every 30 seconds." : "Waiting for a verified public repository snapshot…");
+  notice.textContent = error || (status === "partial" ? "Some GitHub endpoints are unavailable. Available activity remains visible; retrying in 30 seconds." : online ? "Streaming public repository activity. New snapshots arrive about every 30 seconds." : "Waiting for a verified public repository snapshot…");
 }
 
 function relativeTime(value) {
