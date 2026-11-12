@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "description": "Starter cultural references for Graves World. Metadata and original study notes only; no copied protected expression.",
+  "entries": [
+    {
+      "id": "spirited-away",
+      "title": "Spirited Away",
+      "creator": "Hayao Miyazaki / Studio Ghibli",
+      "domain": "cinema",
+      "era": "2001",
+      "themes": [
+        "threshold journeys",
+        "work and dignity",
+        "care across difference",
+        "identity and remembrance"
+      ],
+      "techniques": [
+        "environmental storytelling",
+        "layered background detail",
+        "quiet character beats",
+        "everyday wonder"
+      ],
+      "world_applications": [
+        "Give each town location a practical purpose and a lived-in history.",
+        "Let small acts of care change relationships over time."
+      ],
+      "suggested_targets": [
+        "place",
+        "character",
+        "custom",
+        "story_seed"
+      ],
+      "original_analysis": "A strange world feels emotionally legible when its inhabitants have work, needs, boundaries, and ordinary routines. Wonder is strongest when it shares space with practical details.",
+      "status": "studied",
+      "added_at": "2026-11-12T00:00:00Z",
+      "rights_note": "Reference metadata and original analysis only; do not reproduce film scenes, characters, designs, or dialogue."
+    },
+    {
+      "id": "lord-of-the-rings",
+      "title": "The Lord of the Rings",
+      "creator": "J. R. R. Tolkien",
+      "domain": "literature",
+      "era": "1954-1955",
+      "themes": [
+        "friendship",
+        "stewardship",
+        "temptation",
+        "small courage",
+        "deep time"
+      ],
+      "techniques": [
+        "layered history",
+        "invented languages",
+        "regional ecology",
+        "songs and oral memory"
+      ],
+      "world_applications": [
+        "Give regions distinct histories, names, materials, and customs.",
+        "Make ordinary residents consequential to the fate of places."
+      ],
+      "suggested_targets": [
+        "place",
+        "character",
+        "language",
+        "story_seed",
+        "custom"
+      ],
+      "original_analysis": "A convincing secondary world carries traces of older ages in its geography, language, ruins, songs, and everyday decisions. Scale is balanced by intimate relationships.",
+      "status": "studied",
+      "added_at": "2026-11-12T00:00:00Z",
+      "rights_note": "Reference metadata and original analysis only; no copied passages, maps, languages, or distinctive character designs."
+    },
+    {
+      "id": "green-knight",
+      "title": "The Green Knight",
+      "creator": "David Lowery",
+      "domain": "cinema",
+      "era": "2021",
+      "themes": [
+        "honor",
+        "mortality",
+        "fear",
+        "the cost of reputation",
+        "nature and time"
+      ],
+      "techniques": [
+        "symbolic objects",
+        "visual motifs",
+        "ritualized encounters",
+        "deliberate pacing"
+      ],
+      "world_applications": [
+        "Use recurring objects to carry moral and historical meaning.",
+        "Build quests around choices and consequences rather than combat alone."
+      ],
+      "suggested_targets": [
+        "story_seed",
+        "object",
+        "visual_motif",
+        "custom"
+      ],
+      "original_analysis": "Symbolic journeys gain force when tests reveal character rather than merely measure strength. Repeated visual motifs can let the audience interpret a world without exposition.",
+      "status": "inbox",
+      "added_at": "2026-11-12T00:00:00Z",
+      "rights_note": "Reference metadata and original analysis only; do not reproduce film imagery, dialogue, or scene composition."
+    },
+    {
+      "id": "songs-of-innocence-experience",
+      "title": "Songs of Innocence and of Experience",
+      "creator": "William Blake",
+      "domain": "poetry",
+      "era": "1789-1794",
+      "themes": [
+        "innocence and experience",
+        "social conscience",
+        "spiritual imagination",
+        "contradiction"
+      ],
+      "techniques": [
+        "paired perspectives",
+        "symbolic imagery",
+        "compressed lyrical argument",
+        "mythic figures"
+      ],
+      "world_applications": [
+        "Let festivals and folk songs carry more than one interpretation.",
+        "Give the town poetry that asks questions instead of dictating answers."
+      ],
+      "suggested_targets": [
+        "language",
+        "custom",
+        "story_seed",
+        "visual_motif"
+      ],
+      "original_analysis": "Contrasting perspectives can coexist in a culture. A simple symbol becomes richer when different residents understand it differently.",
+      "status": "studied",
+      "added_at": "2026-11-12T00:00:00Z",
+      "rights_note": "Blake's historical works are public domain in the United States; this archive stores original notes, not reproduced poems."
+    },
+    {
+      "id": "oral-folklore-traditions",
+      "title": "Oral folklore and community storytelling",
+      "creator": "Many traditions and tellers",
+      "domain": "folklore",
+      "era": "Living traditions",
+      "themes": [
+        "belonging",
+        "warning",
+        "hospitality",
+        "local memory",
+        "shared responsibility"
+      ],
+      "techniques": [
+        "repetition with variation",
+        "place-based legends",
+        "call and response",
+        "communal retelling"
+      ],
+      "world_applications": [
+        "Allow stories to change subtly as different residents retell them.",
+        "Create local customs with practical roots and multiple versions."
+      ],
+      "suggested_targets": [
+        "custom",
+        "festival",
+        "language",
+        "story_seed",
+        "place"
+      ],
+      "original_analysis": "Folklore belongs to communities, not a single authorial voice. Treat living traditions with context and respect; avoid flattening distinct cultures into decorative motifs.",
+      "status": "inbox",
+      "added_at": "2026-11-12T00:00:00Z",
+      "rights_note": "Broad study category, not a license to appropriate specific living traditions; research origins and community context before adapting."
+    }
+  ]
+}
