@@ -40,9 +40,9 @@ export async function getChatGPTSession() {
   return publicSession(await client.getSession());
 }
 
-export async function signInToChatGPT() {
+export async function signInToChatGPT({ reconsent = false } = {}) {
   const client = await getClient();
-  return publicSession(await client.signIn());
+  return publicSession(await client.signIn({ reconsent }));
 }
 
 export async function disconnectChatGPT() {
