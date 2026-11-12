@@ -19,6 +19,8 @@ Official references:
 ## Local-only boundaries
 
 - OAuth uses the official local SDK and a loopback callback on 127.0.0.1.
+- The SDK generates and persists an opaque UUID host ID for this local installation and sends it with the authorization request, as required by the current open-source plan-usage flow.
+- OpenAI currently documents eligible ChatGPT Plus and Pro accounts for open-source plan usage. Identity sign-in by itself does not grant model inference; the user must receive and approve the separate plan-usage scope.
 - Access and refresh tokens are held only by the trusted local Node process.
 - On Windows, the SDK credential provider uses DPAPI CurrentUser with application-specific entropy. The encrypted SDK store lives under %LOCALAPPDATA%\GravesPrivateMind\chatgpt.
 - The browser receives only safe session metadata, model names and completed response text. It never receives OAuth tokens.
