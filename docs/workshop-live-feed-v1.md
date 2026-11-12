@@ -16,7 +16,7 @@ Open http://127.0.0.1:4317. Stop the server with Ctrl+C. Set `GRAVES_WORKSHOP_PO
 
 ## What it displays
 
-The local service polls the public GitHub API about every 30 seconds for repository events, commits on this development branch, pull requests, and Actions runs. The browser receives snapshots over Server-Sent Events (SSE), with a simple HTTP snapshot endpoint as a fallback.
+The local service polls the public GitHub API about every 2 minutes for repository events, commits on this development branch, pull requests, and Actions runs. The browser receives snapshots over Server-Sent Events (SSE), with a simple HTTP snapshot endpoint as a fallback.
 
 ## Security boundary
 
