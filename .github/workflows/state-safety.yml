@@ -37,6 +37,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check Workshop JavaScript syntax
+        run: |
+          node --check src/workshop/github-feed.mjs
+          node --check workshop/server.mjs
+          node --check workshop/workshop.js
       - name: Run state contract tests
         run: npm test
       - name: Validate bundled fallback state
