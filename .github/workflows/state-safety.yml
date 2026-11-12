@@ -7,6 +7,8 @@ on:
       - "schemas/**"
       - "scripts/**"
       - "tests/**"
+      - "src/**"
+      - "workshop/**"
       - "package.json"
       - ".github/workflows/state-safety.yml"
   push:
