@@ -55,3 +55,9 @@ test("update validator combines structural, identity and history checks", () => 
   next.sheet.locked = LOCKED_RULES.slice(0, 2);
   assert.ok(validateUpdate(fixture, next).some(message => message.includes("protected rule missing")));
 });
+
+test("impossible calendar dates are rejected", () => {
+  const changed = structuredClone(fixture);
+  changed.journal[0].date = "2026-02-31";
+  assert.ok(validateState(changed).some(message => message.startsWith("journal[0]")));
+});
