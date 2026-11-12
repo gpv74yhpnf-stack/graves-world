@@ -64,4 +64,4 @@ body.world3d{margin:0;overflow:hidden;background:#0b0816;touch-action:none;overs
 .proposal-result h3{margin:0 0 5px;color:#9de7cb}
 .proposal-result p{margin:5px 0;color:#e3e2f0}
 .talk-foot{margin-top:12px}
-@media(max-width:600px){.talk-pin{max-height:90vh!important;padding:1rem .85rem calc(1rem + env(safe-area-inset-bottom))!important}.chat-messages{height:32vh;min-height:130px}.chat-message{max-width:95%;font-size:13px}.chat-actions,.proposal-row{align-items:stretch}.chat-actions button{min-width:84px}.proposal-row #proposal-button{flex:1;font-size:12px}.talk-intro{font-size:13px}}
+@media(max-width:600px){.hud-top .btns{flex-wrap:wrap;justify-content:flex-end;max-width:70vw}.talk-pin{max-height:90vh!important;padding:1rem .85rem calc(1rem + env(safe-area-inset-bottom))!important}.chat-messages{height:32vh;min-height:130px}.chat-message{max-width:95%;font-size:13px}.chat-actions,.proposal-row{align-items:stretch}.chat-actions button{min-width:84px}.proposal-row #proposal-button{flex:1;font-size:12px}.talk-intro{font-size:13px}}
