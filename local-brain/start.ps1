@@ -6,5 +6,5 @@ Write-Host "Checking for model $env:OLLAMA_MODEL ..."
 ollama list
 Write-Host "Starting Graves local brain and private 3D workshop."
 Write-Host "Open http://127.0.0.1:8787/ in this browser on this computer."
-Write-Host "For ChatGPT account mode, run local-brain\\install-chatgpt-sdk.ps1 once before connecting."
+Write-Host "For ChatGPT account mode, run local-brain\install-chatgpt-sdk.ps1 once before connecting."
 node "$PSScriptRoot\server.mjs"
