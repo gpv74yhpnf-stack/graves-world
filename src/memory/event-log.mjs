@@ -26,14 +26,8 @@ function stableJson(value) {
   return JSON.stringify(canonical(value));
 }
 
-function digest(value) {
-  return createHash("sha256").update(stableJson(value), "utf8").digest("hex");
-}
-
 function eventHash(eventWithoutHash) {
-  return createHash("sha256")
-    .update(`${eventWithoutHash.prev_hash}\n${stableJson(eventWithoutHash)}`, "utf8")
-    .digest("hex");
+  return createHash("sha256").update(stableJson(eventWithoutHash), "utf8").digest("hex");
 }
 
 function validateEnvelope(event, expectedSeq, expectedPreviousHash) {
@@ -49,15 +43,9 @@ function validateEnvelope(event, expectedSeq, expectedPreviousHash) {
   }
   if (!isRecord(event.payload)) throw new Error(`Payload must be an object at event ${expectedSeq}`);
   if (event.prev_hash !== expectedPreviousHash) throw new Error(`Broken hash link at event ${expectedSeq}`);
-  if (typeof event.hash !== "string" || event.hash !== eventHash({
-    version: event.version,
-    seq: event.seq,
-    id: event.id,
-    occurred_at: event.occurred_at,
-    type: event.type,
-    payload: event.payload,
-    prev_hash: event.prev_hash
-  })) {
+
+  const { hash, ...body } = event;
+  if (typeof hash !== "string" || hash !== eventHash(body)) {
     throw new Error(`Hash mismatch at event ${expectedSeq}`);
   }
 }
@@ -144,6 +132,7 @@ export async function appendEvent({ storeDir, type, payload, occurredAt = new Da
 
   const directory = path.resolve(storeDir);
   await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+  await fs.chmod(directory, 0o700);
   const logPath = path.join(directory, LOG_NAME);
   const lockPath = path.join(directory, LOCK_NAME);
 
@@ -167,6 +156,7 @@ export async function appendEvent({ storeDir, type, payload, occurredAt = new Da
 
     const handle = await fs.open(logPath, "a", 0o600);
     try {
+      await handle.chmod(0o600);
       await handle.writeFile(line, "utf8");
       await handle.sync();
     } finally {
