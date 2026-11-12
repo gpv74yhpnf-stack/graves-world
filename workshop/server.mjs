@@ -54,7 +54,7 @@ async function refresh() {
 }
 
 function broadcast() {
-  const data = `event: feed\\ndata: ${JSON.stringify(snapshot)}\\n\\n`;
+  const data = `event: feed\ndata: ${JSON.stringify(snapshot)}\n\n`;
   for (const client of clients) {
     try { client.write(data); } catch { clients.delete(client); }
   }
@@ -80,7 +80,7 @@ const server = http.createServer(async (req, res) => {
   const host = String(req.headers.host ?? "").toLowerCase();
   const remote = req.socket.remoteAddress ?? "";
   const loopback = remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
-  if (!loopback || !["127.0.0.1:4317", "localhost:4317", "[::1]:4317"].includes(host)) {
+  if (!loopback || ![`127.0.0.1:${PORT}`, `localhost:${PORT}`, `[::1]:${PORT}`].includes(host)) {
     return sendJson(res, 403, { error: "Local Workshop access only." });
   }
 
@@ -106,7 +106,7 @@ const server = http.createServer(async (req, res) => {
       Connection: "keep-alive",
       "X-Accel-Buffering": "no"
     });
-    res.write(`event: feed\\ndata: ${JSON.stringify(snapshot)}\\n\\n`);
+    res.write(`event: feed\ndata: ${JSON.stringify(snapshot)}\n\n`);
     clients.add(res);
     req.on("close", () => clients.delete(res));
     return;
