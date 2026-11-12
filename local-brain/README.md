@@ -1,6 +1,6 @@
 # Graves Local Brain
 
-This local bridge lets the hosted 3D town talk to an Ollama model running on **your own computer**. The website never receives an Ollama credential and public visitors cannot use your local bridge.
+This local bridge serves a private copy of Graves World on your computer and connects it to your selected local or ChatGPT-powered mind. The public GitHub Pages town remains separate and cannot access this local bridge.
 
 ## Requirements
 - Windows 10/11
