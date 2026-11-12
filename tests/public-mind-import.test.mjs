@@ -73,7 +73,7 @@ test("rejects an invalid snapshot without writing partial migration data", async
     }),
     /Snapshot rejected/
   );
-  await assert.rejects(readEvents(storeDir), /ENOENT/);
+  assert.deepEqual(await readEvents(storeDir), []);
 });
 
 test("refuses to run without a private destination and source snapshots", async () => {
