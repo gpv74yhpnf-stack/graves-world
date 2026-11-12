@@ -6,6 +6,7 @@ on:
       - "state.json"
       - "schemas/**"
       - "scripts/**"
+      - "src/**"
       - "tests/**"
       - "package.json"
       - ".github/workflows/state-safety.yml"
