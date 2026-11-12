@@ -25,6 +25,7 @@ async function getClient() {
       redirectPort: 0,
       storageDir: path.join(privateRoot, 'chatgpt'),
       credentialEncryption,
+      sendHostId: true,
     });
   })().catch(error => { clientPromise = undefined; throw error; });
   return clientPromise;
