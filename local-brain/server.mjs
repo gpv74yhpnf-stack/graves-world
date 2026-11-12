@@ -2,7 +2,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdir, appendFile, chmod, readFile } from 'node:fs/promises';
+import { mkdir, appendFile, chmod, readFile, lstat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { getChatGPTSession, signInToChatGPT, disconnectChatGPT, getChatGPTModels, askChatGPT } from './chatgpt-runtime.mjs';
 
@@ -24,6 +24,8 @@ async function serveStatic(req,res,url){
  if(relative.split(path.sep).some(part=>part.startsWith('.')))return false;
  if(relative.startsWith('local-brain'+path.sep)&&relative!=='local-brain'+path.sep+'README.md')return false;
  try{
+  const info=await lstat(target);
+  if(!info.isFile()||info.isSymbolicLink())return false;
   const data=await readFile(target);
   res.writeHead(200,{'Content-Type':mimeTypes[path.extname(target).toLowerCase()]||'application/octet-stream','Content-Length':data.length,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'});
   if(req.method==='HEAD')res.end();else res.end(data);
