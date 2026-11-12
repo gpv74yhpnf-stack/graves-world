@@ -9,7 +9,7 @@ import { getChatGPTSession, signInToChatGPT, disconnectChatGPT, getChatGPTModels
 const HOST='127.0.0.1', PORT=Number(process.env.GRAVES_BRAIN_PORT||8787);
 const OLLAMA_URL=(process.env.OLLAMA_URL||'http://127.0.0.1:11434').replace(/\/$/,'');
 const MODEL=process.env.OLLAMA_MODEL||'qwen3.5:4b';
-const ALLOWED_ORIGINS=new Set(['https://gpv74yhpnf-stack.github.io','http://localhost:8787','http://127.0.0.1:8787']);
+const ALLOWED_ORIGINS=new Set(['http://localhost:8787','http://127.0.0.1:8787']);
 const privateRoot=process.env.GRAVES_PRIVATE_DIR||(process.env.LOCALAPPDATA?path.join(process.env.LOCALAPPDATA,'GravesPrivateMind'):path.join(os.homedir(),'.graves-world'));
 const projectRoot=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const mimeTypes={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.ico':'image/x-icon','.md':'text/markdown; charset=utf-8','.txt':'text/plain; charset=utf-8','.woff2':'font/woff2'};
