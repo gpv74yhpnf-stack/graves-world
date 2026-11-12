@@ -4,7 +4,7 @@ This local bridge lets the hosted 3D town talk to an Ollama model running on **y
 
 ## Requirements
 - Windows 10/11
-- Node.js 20+
+- Node.js 22+
 - Ollama installed and running
 - A local model (default: qwen3.5:4b)
 
