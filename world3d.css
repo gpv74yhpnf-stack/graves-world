@@ -65,3 +65,18 @@ body.world3d{margin:0;overflow:hidden;background:#0b0816;touch-action:none;overs
 .proposal-result p{margin:5px 0;color:#e3e2f0}
 .talk-foot{margin-top:12px}
 @media(max-width:600px){.hud-top .btns{flex-wrap:wrap;justify-content:flex-end;max-width:70vw}.talk-pin{max-height:90vh!important;padding:1rem .85rem calc(1rem + env(safe-area-inset-bottom))!important}.chat-messages{height:32vh;min-height:130px}.chat-message{max-width:95%;font-size:13px}.chat-actions,.proposal-row{align-items:stretch}.chat-actions button{min-width:84px}.proposal-row #proposal-button{flex:1;font-size:12px}.talk-intro{font-size:13px}}
+
+/* ChatGPT provider and push-to-talk controls */
+.provider-row,.voice-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:.55rem 0}
+.provider-row label{font:700 12px system-ui,sans-serif;color:#c9d8ff}
+.provider-row select{min-width:150px;max-width:100%;background:#11152d;color:#f4f1ff;border:1px solid rgba(142,183,255,.4);border-radius:9px;padding:9px;font:14px system-ui,sans-serif}
+.provider-row button,.voice-row button{min-height:38px;padding:7px 12px;border-radius:9px;border:1px solid rgba(142,183,255,.38);background:rgba(50,64,111,.65);color:#eef2ff;cursor:pointer}
+.provider-row button[hidden],.provider-row[hidden]{display:none}
+#chatgpt-connect{background:linear-gradient(145deg,rgba(57,79,132,.9),rgba(26,34,68,.9));border-color:rgba(142,183,255,.65)}
+#chatgpt-disconnect{background:transparent;border-color:rgba(255,160,170,.3);color:#ffc4ca}
+.voice-row{padding-top:7px;border-top:1px solid rgba(142,183,255,.13)}
+#chat-voice{background:rgba(36,88,93,.55);border-color:rgba(157,231,203,.45);color:#dffff2}
+#chat-voice.listening{background:rgba(130,46,68,.75);border-color:#ff9eae;animation:pulse 1.2s infinite}
+#chat-speak-toggle[aria-pressed="true"]{border-color:rgba(157,231,203,.65);color:#baffdf}
+.voice-note{margin:.25rem 0 .6rem;line-height:1.4;max-width:650px}
+@media(max-width:600px){.provider-row{align-items:stretch}.provider-row select{flex:1;min-width:120px}.provider-row button,.voice-row button{font-size:12px}.voice-row{align-items:stretch}.voice-row button{flex:1}}
