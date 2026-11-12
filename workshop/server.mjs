@@ -34,23 +34,23 @@ async function refresh() {
   const tasks = [
     githubJson("events?per_page=30"),
     ...(refreshMetadata ? [
-      githubJson(\`commits?sha=\${encodeURIComponent(BRANCH)}&per_page=20\`),
+      githubJson(`commits?sha=${encodeURIComponent(BRANCH)}&per_page=20`),
       githubJson("pulls?state=all&sort=updated&direction=desc&per_page=20"),
       githubJson("actions/runs?per_page=15")
     ] : [])
   ];
   const results = await Promise.allSettled(tasks);
   const errors = results.flatMap((result, index) => result.status === "rejected"
-    ? [\`GitHub source \${index + 1}: \${String(result.reason?.message ?? "unavailable").slice(0, 100)}\`]
+    ? [`GitHub source ${index + 1}: ${String(result.reason?.message ?? "unavailable").slice(0, 100)}`]
     : []);
   const eventResult = results[0];
   if (eventResult.status === "fulfilled") {
     const metadataResults = refreshMetadata ? results.slice(1) : [];
     if (refreshMetadata) {
+      lastMetadataAt = Date.now();
       if (metadataResults[0]?.status === "fulfilled") cachedMetadata.commits = metadataResults[0].value;
       if (metadataResults[1]?.status === "fulfilled") cachedMetadata.pulls = metadataResults[1].value;
       if (metadataResults[2]?.status === "fulfilled") cachedMetadata.workflowRuns = metadataResults[2].value.workflow_runs ?? [];
-      if (metadataResults.some(result => result.status === "fulfilled")) lastMetadataAt = Date.now();
     }
     const feed = buildFeed({
       events: eventResult.value,
