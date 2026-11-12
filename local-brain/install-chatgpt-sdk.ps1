@@ -25,7 +25,7 @@ Write-Host "Installing the official local SDK dependencies..."
 npm install --prefix $packageRoot --workspaces=false --no-save --include=dev typescript@^7.0.2 @types/node@^24.0.0
 if ($LASTEXITCODE -ne 0) { throw "SDK dependency installation failed." }
 
-$tsconfig = '{"compilerOptions":{"target":"ES2022","module":"NodeNext","moduleResolution":"NodeNext","strict":true,"skipLibCheck":true,"declaration":true,"outDir":"./dist","rootDir":"./src","types":["node"]},"include":["src/**/*.ts"]}'
+$tsconfig = '{"compilerOptions":{"target":"ES2022","module":"NodeNext","moduleResolution":"NodeNext","lib":["ES2022","DOM","DOM.Iterable"],"strict":true,"noUncheckedIndexedAccess":true,"forceConsistentCasingInFileNames":true,"skipLibCheck":true,"esModuleInterop":true,"verbatimModuleSyntax":true,"declaration":true,"sourceMap":true,"outDir":"./dist","rootDir":"./src","types":["node"]},"include":["src/**/*.ts"]}'
 Set-Content -Path (Join-Path $packageRoot "tsconfig.graves.json") -Value $tsconfig -Encoding Ascii
 
 Write-Host "Building the official local SDK..."
