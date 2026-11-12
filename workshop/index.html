@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Graves Workshop | Live Development Feed</title>
+  <link rel="stylesheet" href="/workshop.css">
+  <script src="/workshop.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Graves Workshop home"><span class="sigil">✦</span><span>GRAVES <i>WORKSHOP</i></span></a>
+      <div class="top-meta"><span class="live-dot" id="live-dot"></span><span id="connection-label">Connecting to repository</span><span class="divider">/</span><span>OPERATOR CONSOLE</span></div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow">THE NECROMANCER'S LABORATORY · DEVELOPMENT OBSERVABILITY</p>
+        <h1>The work, as it happens.</h1>
+        <p class="lede">A live window into Graves World's development. Public GitHub activity only. Private memories stay in the vault.</p>
+      </section>
+
+      <section class="status-grid" aria-label="System status">
+        <article class="status-card"><span class="label">FEED STATUS</span><strong id="feed-status">CONNECTING</strong><small id="feed-updated">Waiting for first snapshot</small></article>
+        <article class="status-card"><span class="label">MONITORED REPOSITORY</span><strong>graves-world</strong><small>gpv74yhpnf-stack</small></article>
+        <article class="status-card"><span class="label">DEVELOPMENT BRANCH</span><strong class="branch">workshop-live-feed</strong><small>graves-v2 / isolated branch</small></article>
+        <article class="status-card"><span class="label">PERMISSIONS</span><strong class="safe">READ ONLY</strong><small>No state writes · no secrets</small></article>
+      </section>
+
+      <section class="feed-panel">
+        <div class="feed-heading">
+          <div><p class="eyebrow">EVENT STREAM</p><h2>Workshop activity</h2></div>
+          <div class="feed-tools"><span id="item-count">0 events</span><button id="refresh-button" type="button">↻ Refresh</button></div>
+        </div>
+        <p class="notice" id="feed-notice" role="status">Connecting to GitHub's public repository API…</p>
+        <ol class="timeline" id="timeline" aria-live="polite">
+          <li class="empty">The lanterns are warming up. Activity will appear here.</li>
+        </ol>
+      </section>
+
+      <aside class="safety-note">
+        <span class="safety-icon">⛨</span>
+        <div><strong>Private by design.</strong><p>This first feed reads public repository metadata through GitHub's API. It does not read the private vault, visitor message contents, credentials, or private runner details. It cannot publish, merge, edit issues, or change the live town.</p></div>
+      </aside>
+    </main>
+    <footer><span>GRAVES WORKSHOP · V2</span><span>LOCAL OBSERVABILITY · POLLS EVERY 30 SECONDS</span></footer>
+  </div>
+</body>
+</html>
