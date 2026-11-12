@@ -1,0 +1,28 @@
+name: Graves local brain checks
+on:
+  pull_request:
+    paths:
+      - "local-brain/**"
+      - "world3d.js"
+      - "index.html"
+      - "world3d.css"
+      - ".github/workflows/brain-bridge-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "local-brain/**"
+      - "world3d.js"
+      - "index.html"
+      - "world3d.css"
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check local bridge syntax
+        run: node --check local-brain/server.mjs
+      - name: Check 3D module syntax
+        run: node --check --input-type=module < world3d.js
