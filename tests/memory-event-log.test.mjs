@@ -78,3 +78,25 @@ test("refuses to append when another writer holds the lock", async t => {
     /lock exists/
   );
 });
+
+test("rejects non-object payloads and invalid timestamps", async t => {
+  const storeDir = await temporaryStore(t);
+  await assert.rejects(
+    appendEvent({ storeDir, type: "operator.note_added", payload: ["not", "an", "object"] }),
+    /payload must be a JSON object/
+  );
+  await assert.rejects(
+    appendEvent({ storeDir, type: "operator.note_added", payload: {}, occurredAt: "not-a-date" }),
+    /valid date-time/
+  );
+});
+
+test("detects a truncated final log record", async t => {
+  const storeDir = await temporaryStore(t);
+  await appendEvent({ storeDir, type: "operator.note_added", payload: { note: "complete" } });
+  await appendEvent({ storeDir, type: "operator.note_added", payload: { note: "second" } });
+  const file = path.join(storeDir, "events.jsonl");
+  const raw = await readFile(file, "utf8");
+  await writeFile(file, raw.slice(0, raw.lastIndexOf("\n", raw.length - 2) + 1) + "{truncated}\n");
+  await assert.rejects(readEvents(storeDir), /Invalid JSON/);
+});
