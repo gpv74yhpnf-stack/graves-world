@@ -1,6 +1,6 @@
 # Graves Local Brain
 
-This local bridge serves a private copy of Graves World on your computer and connects it to your selected local or ChatGPT-powered mind. The public GitHub Pages town remains separate: it may use the loopback Ollama chat endpoints on the same computer, but it cannot access ChatGPT sign-in, account or plan-usage endpoints.
+This local bridge serves a private copy of Graves World on your computer and connects it to your selected local or ChatGPT-powered mind. The public GitHub Pages town remains separate: it may use only the loopback Ollama health and chat endpoints on the same computer. Build-proposal saving and all ChatGPT account, sign-in and plan-usage endpoints are reserved for the private local workshop.
 
 ## Requirements
 - Windows 10/11
