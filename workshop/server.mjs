@@ -8,7 +8,10 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const REPO = "gpv74yhpnf-stack/graves-world";
 const BRANCH = "graves-v2/workshop-live-feed";
 const PORT = Number(process.env.GRAVES_WORKSHOP_PORT || 4317);
-const POLL_MS = 30_000;
+const POLL_MS = 120_000;
+const METADATA_POLL_MS = 15 * 60_000;
+let lastMetadataAt = 0;
+let cachedMetadata = { commits: [], pulls: [], workflowRuns: [] };
 const clients = new Set();
 let snapshot = {
   repository: REPO, branch: BRANCH, generated_at: null,
@@ -27,27 +30,33 @@ async function githubJson(endpoint) {
 
 async function refresh() {
   const attempted = new Date().toISOString();
-  try {
-    const endpoints = [
-      "events?per_page=30",
-      `commits?sha=${encodeURIComponent(BRANCH)}&per_page=20`,
-      "pulls?state=all&sort=updated&direction=desc&per_page=20",
-      "actions/runs?per_page=15"
-    ];
-    const results = await Promise.allSettled(endpoints.map(githubJson));
-    const errors = results.flatMap((result, index) => result.status === "rejected"
-      ? [`${endpoints[index]}: ${String(result.reason?.message ?? "unavailable").slice(0, 100)}`]
-      : []);
-    if (results.every(result => result.status === "rejected")) {
-      throw new Error(errors.join("; ").slice(0, 220));
+  const refreshMetadata = Date.now() - lastMetadataAt >= METADATA_POLL_MS;
+  const tasks = [
+    githubJson("events?per_page=30"),
+    ...(refreshMetadata ? [
+      githubJson(\`commits?sha=\${encodeURIComponent(BRANCH)}&per_page=20\`),
+      githubJson("pulls?state=all&sort=updated&direction=desc&per_page=20"),
+      githubJson("actions/runs?per_page=15")
+    ] : [])
+  ];
+  const results = await Promise.allSettled(tasks);
+  const errors = results.flatMap((result, index) => result.status === "rejected"
+    ? [\`GitHub source \${index + 1}: \${String(result.reason?.message ?? "unavailable").slice(0, 100)}\`]
+    : []);
+  const eventResult = results[0];
+  if (eventResult.status === "fulfilled") {
+    const metadataResults = refreshMetadata ? results.slice(1) : [];
+    if (refreshMetadata) {
+      if (metadataResults[0]?.status === "fulfilled") cachedMetadata.commits = metadataResults[0].value;
+      if (metadataResults[1]?.status === "fulfilled") cachedMetadata.pulls = metadataResults[1].value;
+      if (metadataResults[2]?.status === "fulfilled") cachedMetadata.workflowRuns = metadataResults[2].value.workflow_runs ?? [];
+      if (metadataResults.some(result => result.status === "fulfilled")) lastMetadataAt = Date.now();
     }
-    const value = index => results[index].status === "fulfilled" ? results[index].value : [];
-    const actions = value(3);
     const feed = buildFeed({
-      events: value(0),
-      commits: value(1),
-      pulls: value(2),
-      workflowRuns: actions.workflow_runs ?? [],
+      events: eventResult.value,
+      commits: cachedMetadata.commits,
+      pulls: cachedMetadata.pulls,
+      workflowRuns: cachedMetadata.workflowRuns,
       now: new Date().toISOString()
     });
     snapshot = {
@@ -56,12 +65,19 @@ async function refresh() {
       last_attempt_at: attempted,
       error: errors.length ? errors.join("; ").slice(0, 240) : null
     };
-  } catch (error) {
+  } else if (snapshot.generated_at) {
     snapshot = {
       ...snapshot,
-      status: snapshot.generated_at ? "stale" : "offline",
+      status: "stale",
       last_attempt_at: attempted,
-      error: String(error?.message ?? "Unknown upstream error").slice(0, 240)
+      error: String(eventResult.reason?.message ?? "GitHub events unavailable").slice(0, 240)
+    };
+  } else {
+    snapshot = {
+      ...snapshot,
+      status: "offline",
+      last_attempt_at: attempted,
+      error: errors.join("; ").slice(0, 240) || "GitHub sources unavailable"
     };
   }
   broadcast();
