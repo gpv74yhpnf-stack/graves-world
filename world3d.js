@@ -461,7 +461,44 @@ const audio = (() => {
     open(){ if (on && ctx){ note(523, ctx.currentTime, 1.5, .05); note(784, ctx.currentTime + .12, 1.5, .04); } },
   };
 })();
+
 $('#snd').addEventListener('click', () => { const on = audio.toggle(); $('#snd').textContent = on ? '🔊' : '🔇'; toast(on ? 'Ambient sound on' : 'Sound off'); });
+
+/* ---------- private in-world conversation with the local Graves brain ---------- */
+const chatMessages = [];
+const brainBase = () => (localStorage.getItem('graves_brain_url') || 'http://127.0.0.1:8787').replace(/\/$/, '');
+const chatStatus = $('#chat-status'), chatList = $('#chat-messages'), chatInput = $('#chat-input');
+function setChatStatus(message, kind=''){ chatStatus.textContent=message; chatStatus.className='chat-status'+(kind?' '+kind:''); }
+function addChatMessage(role, content){
+  const empty=chatList.querySelector('.chat-empty'); if(empty) empty.remove();
+  const item=document.createElement('div'); item.className='chat-message '+(role==='assistant'?'graves':'operator');
+  const who=document.createElement('span'); who.className='speaker'; who.textContent=role==='assistant'?'Graves':'You';
+  const body=document.createElement('span'); body.textContent=content;
+  item.append(who,body); chatList.appendChild(item); chatList.scrollTop=chatList.scrollHeight;
+}
+function worldContext(){return {place:nearPlace?PLACES[nearPlace].name:null,location:STATE?.location||null,mood:STATE?.mood?.label||null,activity:STATE?.activity||null,thought:short(STATE?.thought||'',260),day:STATE?.day||null};}
+async function checkBrain(){
+  setChatStatus('Looking for the local AI brain…');
+  try{const r=await fetch(brainBase()+'/api/health',{cache:'no-store'});if(!r.ok)throw new Error('Local bridge returned '+r.status);const data=await r.json();if(!data.connected)throw new Error(data.message||'Ollama is not responding.');setChatStatus('Connected · '+data.model+' · replies run on this computer','connected');}
+  catch(e){setChatStatus('Not connected. Start Ollama and the Graves local bridge on this computer. Setup guide below. ('+short(e.message,110)+')','error');}
+}
+$('#talkb').addEventListener('click',()=>{show('p-conversation');checkBrain();setTimeout(()=>chatInput.focus(),120);});
+$('#chat-form').addEventListener('submit',async e=>{
+  e.preventDefault();const message=chatInput.value.trim();if(!message)return;
+  const send=$('#chat-send');chatInput.value='';chatMessages.push({role:'user',content:message});addChatMessage('user',message);send.disabled=true;setChatStatus('Graves is gathering his thoughts…');
+  try{const r=await fetch(brainBase()+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'The local mind could not answer.');const reply=String(data.reply||'The lantern flickers, but no words came through.').slice(0,5000);chatMessages.push({role:'assistant',content:reply});addChatMessage('assistant',reply);setChatStatus('Connected · '+(data.model||'local model'),'connected');$('#proposal-button').disabled=false;}
+  catch(err){chatMessages.pop();chatInput.value=message;setChatStatus(err.message+' Check the local bridge and try again.','error');}
+  finally{send.disabled=false;chatInput.focus();}
+});
+chatInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#chat-form').requestSubmit();}});
+$('#chat-clear').addEventListener('click',()=>{chatMessages.length=0;chatList.innerHTML='<div class="chat-empty">The lantern is waiting. Start us off.</div>';$('#proposal-button').disabled=true;$('#proposal-result').hidden=true;setChatStatus('Conversation cleared. This session was not saved.');});
+$('#proposal-button').addEventListener('click',async()=>{
+  if(!chatMessages.length)return;const button=$('#proposal-button');button.disabled=true;button.textContent='Drafting proposal…';
+  try{const r=await fetch(brainBase()+'/api/propose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Could not create a proposal.');const p=data.proposal,box=$('#proposal-result');box.hidden=false;box.replaceChildren();const title=document.createElement('h3');title.textContent='Proposal saved to your private vault';const name=document.createElement('p');name.textContent=p.title+' · '+p.kind;const summary=document.createElement('p');summary.textContent=p.summary;const details=document.createElement('p');details.textContent=(p.design_notes||[]).join(' • ');const status=document.createElement('p');status.textContent='Review required · Not applied to the world';box.append(title,name,summary,details,status);setChatStatus('Proposal saved locally for review. Nothing has been published.','connected');}
+  catch(err){setChatStatus(err.message,'error');}
+  finally{button.disabled=false;button.textContent='✧ Turn this conversation into a build proposal';}
+});
+
 
 /* ---------- input: tap/click to move, drag to orbit, pinch/scroll zoom, WASD ---------- */
 const cam = { yaw: 0.0, pitch: MOBILE ? .55 : 0.42, dist: MOBILE ? 15 : 12, look: new THREE.Vector3() };
