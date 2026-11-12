@@ -28,5 +28,19 @@ jobs:
         run: |
           node --check local-brain/chatgpt-runtime.mjs
           node --check local-brain/dpapi-encryption.mjs
+          node --check local-brain/test-dpapi.mjs
       - name: Check 3D module syntax
         run: node --check --input-type=module < world3d.js
+
+  windows-sdk-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build official local SDK
+        shell: pwsh
+        run: .\local-brain\install-chatgpt-sdk.ps1
+      - name: Verify Windows DPAPI round-trip
+        run: node .\local-brain\test-dpapi.mjs
