@@ -12,7 +12,7 @@ New-Item -ItemType Directory -Force -Path $vendorRoot | Out-Null
 if (-not (Test-Path (Join-Path $sdkRoot ".git"))) {
   git clone --depth 1 --filter=blob:none --sparse https://github.com/openai/sign-in-with-chatgpt-devkit.git $sdkRoot
   if ($LASTEXITCODE -ne 0) { throw "Could not download the official Sign in with ChatGPT DevKit." }
-  git -C $sdkRoot sparse-checkout set LICENSE packages/local
+  git -C $sdkRoot sparse-checkout set packages/local
   if ($LASTEXITCODE -ne 0) { throw "Could not retrieve the local SDK package." }
 } else {
   git -C $sdkRoot pull --ff-only
