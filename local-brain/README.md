@@ -9,17 +9,17 @@ This local bridge lets the hosted 3D town talk to an Ollama model running on **y
 - A local model (default: qwen3.5:4b)
 
 ## Start it
-1. Pull the model if it is not installed:
+1. Pull the local model if it is not installed (optional if you only plan to use ChatGPT):
    ```powershell
    ollama pull qwen3.5:4b
    ```
-2. Start the bridge from the repository root:
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\local-brain\start.ps1
-   ```
-3. For the ChatGPT-connected private workshop, install the official connector once:
+2. Install the official ChatGPT connector once:
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\local-brain\install-chatgpt-sdk.ps1
+   ```
+3. Start the bridge from the repository root:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\local-brain\start.ps1
    ```
 4. Leave the bridge terminal open and visit **http://127.0.0.1:8787/** on the same computer. This is your private local copy of the 3D town. Press **Talk**.
 5. Choose **ChatGPT account**, then **Connect ChatGPT**. Sign in through the browser and review the separate permission to use your ChatGPT plan. You can also choose **Local Ollama** at any time.
