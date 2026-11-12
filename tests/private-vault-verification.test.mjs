@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -78,6 +78,7 @@ test("verifier fails closed when an event has been modified", async () => {
 
 test("verifier fails closed for a broken sequence or malformed log", async () => {
   await withStore(async store => {
+    await mkdir(store, { recursive: true });
     await writeFile(path.join(store, "events.jsonl"), '{"seq":2}\n', "utf8");
     const result = execute(store);
     assert.equal(result.status, 1);
