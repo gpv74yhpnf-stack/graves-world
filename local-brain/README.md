@@ -26,7 +26,7 @@ This local bridge serves a private copy of Graves World on your computer and con
 
 The bridge listens only on 127.0.0.1:8787 and serves the local 3D site from the repository folder. Ollama is expected at 127.0.0.1:11434. To use another local model, set $env:OLLAMA_MODEL before running the start script.
 
-The ChatGPT connector uses OpenAI's official Sign in with ChatGPT local SDK. It stores OAuth credentials in the private Graves vault using Windows DPAPI CurrentUser protection. The ChatGPT plan permission is separate from identity sign-in and is optional. Usage and model access depend on the permissions and limits shown by your account. The SDK is downloaded to the private vault rather than copied into this repository. See [the connector privacy and license notes](../docs/chatgpt-local-connection-v1.md).
+The ChatGPT connector uses OpenAI's official Sign in with ChatGPT local SDK. It stores OAuth credentials in the private Graves vault using Windows DPAPI CurrentUser protection and persists the required local host ID. The ChatGPT plan permission is separate from identity sign-in and is optional. OpenAI currently documents Plus and Pro as eligible for open-source plan usage; a Free account can still use the Local Ollama option. Usage and model access depend on the permissions and limits shown by your account. The SDK is downloaded to the private vault rather than copied into this repository. See [the connector privacy and license notes](../docs/chatgpt-local-connection-v1.md).
 
 ## What works
 - In-world chat with the local Ollama model.
