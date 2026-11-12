@@ -13,12 +13,18 @@ async function getClient() {
   if (!clientPromise) clientPromise = (async () => {
     if (process.platform !== 'win32') throw new Error('The first Graves ChatGPT connector currently requires Windows DPAPI credential protection.');
     const { createChatGPT } = await import(pathToFileURL(sdkEntry).href);
+    const credentialEncryption = createWindowsDpapiEncryption();
+    const probe = 'Graves World DPAPI credential-storage self-test';
+    const encryptedProbe = await credentialEncryption.encrypt(probe);
+    if (await credentialEncryption.decrypt(encryptedProbe) !== probe) {
+      throw new Error('Windows DPAPI credential-storage self-test failed. No ChatGPT sign-in was started.');
+    }
     return createChatGPT({
       appName: 'Graves World',
       appId: 'graves-world',
       redirectPort: 0,
       storageDir: path.join(privateRoot, 'chatgpt'),
-      credentialEncryption: createWindowsDpapiEncryption(),
+      credentialEncryption,
     });
   })().catch(error => { clientPromise = undefined; throw error; });
   return clientPromise;
