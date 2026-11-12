@@ -466,7 +466,7 @@ $('#snd').addEventListener('click', () => { const on = audio.toggle(); $('#snd')
 
 /* ---------- private in-world conversation with the local Graves brain ---------- */
 const chatMessages = [];
-const brainBase = () => (localStorage.getItem('graves_brain_url') || 'http://127.0.0.1:8787').replace(/\/$/, '');
+const brainBase = () => (localStorage.getItem('graves_brain_url') || (['127.0.0.1','localhost'].includes(location.hostname) && location.port === '8787' ? location.origin : 'http://127.0.0.1:8787')).replace(/\/$/, '');
 const chatStatus = $('#chat-status'), chatList = $('#chat-messages'), chatInput = $('#chat-input');
 function setChatStatus(message, kind=''){ chatStatus.textContent=message; chatStatus.className='chat-status'+(kind?' '+kind:''); }
 function addChatMessage(role, content){
