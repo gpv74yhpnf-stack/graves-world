@@ -24,5 +24,9 @@ jobs:
           node-version: 24
       - name: Check local bridge syntax
         run: node --check local-brain/server.mjs
+      - name: Check ChatGPT runtime syntax
+        run: |
+          node --check local-brain/chatgpt-runtime.mjs
+          node --check local-brain/dpapi-encryption.mjs
       - name: Check 3D module syntax
         run: node --check --input-type=module < world3d.js
