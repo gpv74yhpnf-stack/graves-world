@@ -47,16 +47,26 @@ if (-not $SkipLiveIssue) {
   $headers = @{ "User-Agent" = "Graves-Private-Mind-Migration"; "Accept" = "application/vnd.github+json" }
   $issue = Invoke-RestMethod -Uri "https://api.github.com/repos/gpv74yhpnf-stack/graves-world/issues/1" -Headers $headers
   if (-not $issue.body) { throw "Issue #1 returned an empty body. Nothing was imported." }
-  $jsonText = ([string]$issue.body).Trim()
-  if ($jsonText.StartsWith('````')) {
-    $jsonText = ($jsonText -replace '(?s)^````(?:json)?\s*', '' -replace '\s*````\s*$', '').Trim()
-  } elseif ($jsonText.StartsWith('```')) {
-    $jsonText = ($jsonText -replace '(?s)^```(?:json)?\s*', '' -replace '\s*```\s*$', '').Trim()
+  $bodyText = [string]$issue.body
+  # Issue #1 is explanatory Markdown followed by a fenced JSON state block.
+  # Extract the fenced block rather than parsing the entire Markdown body.
+  $fenceMatches = [regex]::Matches($bodyText, '(?s)\x60{3}(?:json)?\s*(.*?)\s*\x60{3}')
+  if ($fenceMatches.Count -gt 0) {
+    $jsonText = $fenceMatches[$fenceMatches.Count - 1].Groups[1].Value.Trim()
+  } else {
+    $jsonText = $bodyText.Trim()
   }
   try { $stateObject = $jsonText | ConvertFrom-Json -ErrorAction Stop }
-  catch { throw "Issue #1 body is not standalone JSON. Nothing was imported. Inspect the issue body manually." }
-  if (-not $stateObject.updated -or -not $stateObject.character) { throw "Issue #1 JSON does not resemble a Graves state snapshot. Nothing was imported." }
+  catch { throw "Could not parse a JSON state snapshot from Issue #1. No live snapshot was imported. Inspect the issue body manually." }
+  if (-not $stateObject.updated -or -not $stateObject.sheet -or -not $stateObject.needs -or -not $stateObject.memories) {
+    throw "Issue #1 JSON is missing expected Graves state fields (updated, sheet, needs, memories). Nothing was imported."
+  }
   [IO.File]::WriteAllText($issueExport, $jsonText, (New-Object System.Text.UTF8Encoding($false)))
+  Push-Location $RepositoryRoot
+  try {
+    & node "scripts/state-contract.mjs" $issueExport
+    if ($LASTEXITCODE -ne 0) { throw "Issue #1 snapshot failed the Graves state contract. Nothing was imported." }
+  } finally { Pop-Location }
   $snapshotArgs += @("--snapshot", "live-issue-current=$issueExport")
 } else {
   Write-Warning "Skipped live Issue #1 export. Only repository state.json will be imported."
