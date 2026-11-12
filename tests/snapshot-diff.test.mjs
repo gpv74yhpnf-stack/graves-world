@@ -48,6 +48,14 @@ test("distinguishes added and removed fields without inventing values", () => {
   assert.equal(added.after_exists, true);
 });
 
+test("does not report structurally identical arrays as changes", () => {
+  const report = compareSnapshots({
+    before: { updated: "2026-11-11T13:30:00Z", memories: { keeping: ["moonbells"] } },
+    after: { updated: "2026-11-11T14:30:00Z", memories: { keeping: ["moonbells"] } }
+  });
+  assert.deepEqual(report.changes.map(change => change.path), ["updated"]);
+});
+
 test("rejects snapshots with missing timestamps or reversed chronology", () => {
   assert.throws(() => compareSnapshots({
     before: { location: "a" },

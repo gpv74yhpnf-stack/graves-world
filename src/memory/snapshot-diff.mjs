@@ -20,6 +20,7 @@ function digest(value) {
 
 function collectChanges(before, after, path, output) {
   if (Object.is(before, after)) return;
+  if (JSON.stringify(stable(before)) === JSON.stringify(stable(after))) return;
   if (isRecord(before) && isRecord(after)) {
     const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
     for (const key of keys) {
