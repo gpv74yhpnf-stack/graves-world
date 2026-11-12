@@ -1,0 +1,39 @@
+name: State safety checks
+
+on:
+  pull_request:
+    paths:
+      - "state.json"
+      - "schemas/**"
+      - "scripts/**"
+      - "tests/**"
+      - "package.json"
+      - ".github/workflows/state-safety.yml"
+  push:
+    branches:
+      - "graves-v2/**"
+    paths:
+      - "state.json"
+      - "schemas/**"
+      - "scripts/**"
+      - "tests/**"
+      - "package.json"
+      - ".github/workflows/state-safety.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  state-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run state contract tests
+        run: npm test
+      - name: Validate bundled fallback state
+        run: npm run validate:state
