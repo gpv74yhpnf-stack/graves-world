@@ -23,6 +23,7 @@ Official references:
 - On Windows, the SDK credential provider uses DPAPI CurrentUser with application-specific entropy. The encrypted SDK store lives under %LOCALAPPDATA%\GravesPrivateMind\chatgpt.
 - The browser receives only safe session metadata, model names and completed response text. It never receives OAuth tokens.
 - The local bridge remains bound to 127.0.0.1. Never bind it to 0.0.0.0 or expose port 8787.
+- ChatGPT routes require a same-origin, HttpOnly, SameSite=Strict local session cookie set by the private workshop page. The browser cannot read the cookie value; the public GitHub Pages origin is denied these routes.
 - ChatGPT plan use is a separate consent from identity sign-in. A connected identity without the chatgpt.tokens.use.direct permission cannot make model requests.
 - Usage is subject to account eligibility, model availability, usage limits and user-controlled app limits. The app must show the active provider and make disconnect available.
 - Requests are user-initiated. Do not run background requests or let public visitors trigger requests against the Operator's plan.
