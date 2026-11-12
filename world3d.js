@@ -432,7 +432,7 @@ $('#travel').addEventListener('click', e => { const k = e.target.closest('button
 let pendingOpen = null;
 function goTo(v, openKey){ moveTarget.copy(v); hasTarget = true; marker.visible = true; marker.position.set(v.x, .07, v.z); pendingOpen = openKey || null; audio.chime(); }
 function show(id){ closeAll(); const p = document.getElementById(id); if (!p) return; p.hidden = false; openPanel = id; if (id === 'p-ledger_shop' && !$('#shop').children.length && window.renderShop) window.renderShop(); }
-function closeAll(){ document.querySelectorAll('.panel').forEach(p => p.hidden = true); openPanel = null; }
+function closeAll(){ if (recognition) recognition.stop(); if ('speechSynthesis' in window) window.speechSynthesis.cancel(); document.querySelectorAll('.panel').forEach(p => p.hidden = true); openPanel = null; }
 document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => { if (e.target === p || e.target.classList.contains('x') || e.target.classList.contains('go')) closeAll(); }));
 $('#promptb').addEventListener('click', () => nearPlace && show('p-' + nearPlace));
 $('#helpb').addEventListener('click', () => show('help'));
