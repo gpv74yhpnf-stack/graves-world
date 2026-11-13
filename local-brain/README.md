@@ -2,6 +2,8 @@
 
 This local bridge lets the hosted 3D town talk to an Ollama model running on **your own computer**. The website never receives an Ollama credential and public visitors cannot use your local bridge.
 
+This bridge is not the scheduled public mind. Grok publishes that state to GitHub issue #1. The contract is [docs/grok-live-brain-v1.md](../docs/grok-live-brain-v1.md). Keep this bridge, chat, and voice working when that loop changes.
+
 ## Requirements
 - Windows 10/11
 - Node.js 20+

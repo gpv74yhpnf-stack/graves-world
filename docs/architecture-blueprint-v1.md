@@ -1,5 +1,7 @@
 # Graves World: Architecture Blueprint v1
 
+> **Update (2026-11-13).** The external brain runner is Grok, on a three-times-daily schedule, and it still lives outside this file tree. Contract: [grok-live-brain-v1.md](grok-live-brain-v1.md). The blueprint below stays as written.
+
 **Status:** Discovery baseline  
 **Date:** 2026-11-12  
 **Branch:** graves-v2/architecture-blueprint  
