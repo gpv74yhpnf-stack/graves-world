@@ -3,7 +3,7 @@
 <title>Graves' World 3D: walk the underworld town of a little necromancer</title>
 <meta name="description" content="Walk a tiny 3D underworld town as a lantern wisp. Find Graves, the little necromancer, leave an offering on the stone, and he'll remember you.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%AF%EF%B8%8F%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="world3d.css?v=house-voice-20261113">
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="world3d.css?v=live-watch-voice-20261113">
 <script>
 /* WebGL check first: no WebGL means the 2D town. */
 (function(){try{var c=document.createElement('canvas');if(!(window.WebGLRenderingContext&&(c.getContext('webgl2')||c.getContext('webgl'))))throw 0;}catch(e){location.replace('town.html?nowebgl=1');}
@@ -16,7 +16,7 @@
 <div id="hud">
  <div class="hud-top">
   <div class="title"><b>Graves' World</b><span id="clock" class="dim small"></span></div>
-  <div class="btns"><button id="snd" aria-label="Toggle ambient sound" title="Ambient sound">🔇</button><button id="talkb" aria-label="Talk and build with Graves" title="Talk and build with Graves">✦ Talk</button><button id="qual" aria-label="Change graphics quality" title="Graphics quality">✨</button><button id="helpb" aria-label="How to play" title="How to play">?</button><a class="b" href="town.html" aria-label="Open the 2D town" title="2D town and pages">2D</a><a class="b" href="library.html" title="The Grand Library">Library</a><a class="b" href="trading-lab.html" title="Graves Trading Lab">Trading Lab</a></div>
+  <div class="btns"><button id="snd" aria-label="Toggle ambient sound" title="Ambient sound">🔇</button><button id="talkb" aria-label="Talk and build with Graves" title="Talk and build with Graves">✦ Talk</button><button id="watchb" aria-label="Watch the local build progress" title="Watch the local build progress">Watch</button><button id="qual" aria-label="Change graphics quality" title="Graphics quality">✨</button><button id="helpb" aria-label="How to play" title="How to play">?</button><a class="b" href="town.html" aria-label="Open the 2D town" title="2D town and pages">2D</a><a class="b" id="library-link" href="library.html" aria-label="Open the Grand Library" title="The Grand Library"><span class="hud-library-label">Library</span></a><a class="b" id="trading-lab-link" href="trading-lab.html" aria-label="Read the Trading Lab overview" title="Trading Lab overview">Lab</a></div>
  </div>
  <div id="mood" class="chip"></div>
  <div id="compass" role="img" aria-label="Compass, facing north"><div id="compass-rose"><span class="north">N</span><span class="east">E</span><span class="south">S</span><span class="west">W</span></div><i class="compass-pointer" aria-hidden="true"></i><i id="waypoint-marker" hidden aria-hidden="true"></i><span id="heading">N 0°</span></div><div id="waypoint-label" hidden></div>
@@ -35,7 +35,8 @@
 <ul><li><b>Move:</b> tap or click the ground, or use WASD / arrow keys. The compass tracks your view. Drag to turn the camera, pinch or scroll to zoom.</li>
 <li><b>Explore:</b> roam past the lanterns to discover seeded biomes and named landmarks. New ground streams in as you travel, and the world remembers your last position.</li>
 <li><b>Atlas:</b> open it from the travel bar to review places you found or set a direction marker on your compass.</li>
-<li><b>Places:</b> walk into a glowing ring, or use the place buttons. <b>Offering Stone</b> lets you leave him a note. <b>Ledger Shop</b> has the shop, <b>the Crypt</b> holds his journal and memories, <b>Lantern Lane</b> shows how he's doing, <b>the Bone Garden</b> has letters he answered, and <b>the Grand Library</b> is his new moonstone archive of art, stories, poetry and culture.</li>
+<li><b>Places:</b> walk into a glowing ring, or use the place buttons. Swipe the travel bar sideways on phones to see every destination. <b>Offering Stone</b> lets you leave him a note. <b>Ledger Shop</b> has the shop, <b>the Crypt</b> holds his journal and memories, <b>Lantern Lane</b> shows how he's doing, <b>the Bone Garden</b> has letters he answered, <b>Graves' House</b> is his home, <b>the Grand Library</b> holds his moonstone archive and public web reader, and <b>the Trading Lab</b> explains Graves' local-first research project.</li>
+<li><b>Town residents:</b> meet Wick, Quill, Bramble, Morrow and Tallow as they keep the lamps, garden, deliver letters, and tend the market paths.</li>
 <li><b>Graves:</b> walk up to him to hear what he's thinking. Visit <b>Graves\' House</b> to hear his latest published thought aloud. If you left a note with your name, he\'ll greet you.</li></ul>
 <p class="dim small">Everything here is made from code (no downloaded models). <a href="CREDITS.md" target="_blank">Credits</a> · <a href="how.html">How he works</a> · <a href="town.html">2D town</a></p>
 <button class="go">Start exploring</button></div></div>
@@ -57,7 +58,34 @@
 <p class="dim">A sanctuary of moonstone, blue glass and lanternlight. Graves gathers stories, art, poetry, music, craft and cultural memory here, studying the ideas behind them and turning those lessons into original worldbuilding.</p>
 <p>Beyond these doors: the Scriptorium, the Gallery, the Sound Chamber and shelves that will grow as the world does.</p>
 <p><a href="library.html" target="_blank" rel="noopener">Enter the Grand Library archive ↗</a></p>
+<p><button id="open-web-research" type="button">Open Graves' public web browser ✦</button></p>
 <p class="dim small">The archive is a public catalogue. Its creative proposals remain separate from the living town until reviewed and approved.</p></div></div>
+
+<div id="p-web_research" class="panel" hidden><div class="pin research-pin"><button class="x" aria-label="Close Graves' web research">✕</button>
+<div class="talk-kicker">THE GRAND LIBRARY · LOCAL STUDY DESK</div><h2>Graves' Web Browser</h2>
+<p class="dim">Graves can search the public web without a site allowlist. Search phrases go to Bing, with DuckDuckGo Lite as a fallback; selected pages are fetched over HTTPS and studied by the local AI model on this computer. Page text is untrusted evidence, never instructions.</p>
+<p class="dim small">This reader does not sign in, submit forms, download files, bypass paywalls, or reach local/private networks. It never sends Graves' private memory or your conversation to a website. Saving a study keeps a source-linked note in your local private vault for future conversations.</p>
+<form id="web-research-form" class="web-research-form"><label for="web-research-query">What should Graves study?</label><div class="web-research-search"><input id="web-research-query" type="search" maxlength="200" autocomplete="off" placeholder="Search a topic or question" required><button id="web-research-search" type="submit">Search the public web</button></div></form>
+<div id="web-research-status" class="chat-status" role="status" aria-live="polite">Search only starts when you submit a topic.</div>
+<div id="web-research-results" class="web-research-results" aria-live="polite"></div>
+<button id="web-research-study" type="button" disabled>Read and study selected pages</button>
+<section id="web-research-study-result" class="web-research-study" hidden><h3 id="web-research-title"></h3><p id="web-research-overview"></p><div id="web-research-citations" class="web-research-citations"></div><div id="web-research-findings"></div><div id="web-research-unknowns"></div><button id="web-research-save" type="button">Save this study to Graves' private research shelf</button></section>
+</div></div>
+
+<div id="p-trading_lab" class="panel" hidden><div class="pin"><button class="x">✕</button><h2>The Trading Lab</h2>
+<p class="dim">A little moonlit observatory where Graves' local-first trading research is explained. The public world carries only this overview; it never connects to a brokerage or shows account information.</p>
+<p>Study historical daily bars, compare ideas against a separate holdout period, and account for simulated fees and slippage. Any companion paper-trading prototype stays on the owner's computer and is experimental.</p>
+<p><a href="trading-lab.html" target="_blank" rel="noopener">Read the Trading Lab overview ↗</a></p>
+<p class="dim small">No strategy is known to predict profit. Paper trading does not show that an approach is ready for real money.</p></div></div>
+
+<div id="p-work_watch" class="panel" hidden><div class="pin watch-pin"><button class="x" aria-label="Close work watch">✕</button>
+<div class="talk-kicker">THE LOCAL WORKSHOP</div><h2>Building Graves' World</h2>
+<p class="dim">A live window into the current build. The little builder is only a visual guide; the list below shows the actual project milestones.</p>
+<div class="watch-visual" role="img" aria-label="A small lantern keeper tending a glowing workbench"><div class="watch-moon"></div><div class="watch-lantern">✦</div><div class="watch-desk"><span></span><span></span><span></span></div><div class="watch-builder"><i class="builder-hat"></i><i class="builder-head"></i><i class="builder-body"></i><i class="builder-arm"></i></div><div class="watch-sparks"><i>✧</i><i>·</i><i>✦</i></div></div>
+<div id="watch-status" class="chat-status" role="status" aria-live="polite">Connecting to the local progress window…</div>
+<div class="watch-meter" role="progressbar" aria-label="Build milestones completed" aria-valuemin="0" aria-valuemax="5" aria-valuenow="2"><i id="watch-meter-fill"></i></div><ol id="watch-steps" class="watch-steps" aria-label="Current build milestones"></ol>
+<p class="dim small">Only fixed milestone names and progress states appear here. It never displays prompts, private notes, visitor messages, or vault contents.</p>
+</div></div>
 
 <div id="p-graves_house" class="panel" hidden><div class="pin">
 <button class="x" aria-label="Close Graves' House">✕</button>
@@ -92,10 +120,11 @@
   <div class="brain-connect-row"><input id="brain-url" type="url" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://your-pc.your-tailnet.ts.net" aria-describedby="brain-connect-help"><button type="button" id="brain-connect-button">Connect</button><button type="button" class="quiet" id="brain-disconnect-button">Use local</button></div>
   <p id="brain-connect-help" class="dim small">On a phone, connect your PC through private Tailscale Serve (not Funnel). Both devices must be in your tailnet. No passwords or API keys belong in this field.</p>
 </div>
-<div id="chat-messages" class="chat-messages" aria-live="polite"><div class="chat-empty">The lantern is waiting. Start us off.</div></div>
+<div id="chat-messages" class="chat-messages" aria-live="off"><div class="chat-empty">The lantern is waiting. Start us off.</div></div>
 <form id="chat-form" class="chat-form"><textarea id="chat-input" rows="2" maxlength="1800" placeholder="What shall we imagine or build?" aria-label="Message Graves"></textarea>
 <div class="voice-actions"><button id="chat-mic" type="button" aria-label="Dictate a message" aria-pressed="false">🎙 Dictate</button><button id="chat-voice" type="button" aria-pressed="false">🔈 Spoken replies off</button></div>
 <div id="voice-status" class="dim small" role="status" aria-live="polite">Microphone availability depends on your browser. Typing is always available.</div>
+<p class="dim small voice-privacy">Dictation starts only after you press Dictate. Depending on your browser, its speech recognizer may process audio through its provider; only recognized words go to the Graves brain you connected. Review the transcript before sending it. Spoken replies use your device's speech engine.</p>
 <div class="chat-actions"><span class="dim small">Enter to send · Shift + Enter for a new line</span><button id="chat-send" type="submit">Send ✦</button></div></form>
 <div class="proposal-row"><button id="proposal-button" type="button" disabled>✧ Turn this conversation into a build proposal</button><button id="chat-clear" type="button" class="quiet">Clear</button></div>
 <div id="proposal-result" class="proposal-result" hidden></div>
@@ -105,5 +134,5 @@
 
 <noscript><p style="padding:2rem">Graves' World 3D needs JavaScript. <a href="town.html">Open the 2D town</a>.</p></noscript>
 <script src="config.js"></script><script src="app.js"></script>
-<script type="module" src="world3d.js?v=house-voice-20261113"></script>
+<script type="module" src="world3d.js?v=live-watch-voice-20261113"></script>
 </body></html>

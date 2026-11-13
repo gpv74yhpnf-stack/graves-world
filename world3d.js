@@ -8,6 +8,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { CHUNK_SIZE, CHUNK_LOAD_RADIUS, CHUNK_UNLOAD_RADIUS, UNDERWORLD_BIOMES, biomeForChunk, chunksAround, createChunkRandom, landmarkForCell, landmarkForChunk, worldGroundHeight } from './src/worldgen/undercroft.mjs';
+import { TOWN_RESIDENTS } from './src/worldgen/town-life.mjs';
+import { readChatStream } from './src/chat/ndjson-client.mjs';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -20,15 +22,16 @@ const COMPASS_SHORT_NAMES = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const lerp = THREE.MathUtils.lerp, clamp = THREE.MathUtils.clamp;
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
-/* ---------- places (keys match state.location) ---------- */
+/* ---------- places (canonical keys match state.location; extra keys are visitor-only destinations) ---------- */
 const PLACES = {
   crypt:          { name:"The Crypt",          pos:new THREE.Vector3(-24,0,-8),  stand:new THREE.Vector3(-24,0,-3.2), ring:new THREE.Vector3(-24,0,-2.2), r:2.4, open:"Read his journal" },
-  graves_house:   { name:"Graves\' House",        pos:new THREE.Vector3(-24,0,20),  stand:new THREE.Vector3(-24,0,25.3), ring:new THREE.Vector3(-24,0,27.1), r:2.5, open:"Visit Graves\' House" },
+  graves_house:   { name:"Graves' House",       pos:new THREE.Vector3(-24,0,20), stand:new THREE.Vector3(-24,0,25.3), ring:new THREE.Vector3(-24,0,27.1), r:2.5, open:"Visit Graves' House" },
   lantern_lane:   { name:"Lantern Lane",       pos:new THREE.Vector3(-11,0,2),   stand:new THREE.Vector3(-11,0,3.5),  ring:new THREE.Vector3(-11,0,5),    r:2.4, open:"See how he's doing" },
   offering_stone: { name:"The Offering Stone", pos:new THREE.Vector3(1,0,9),     stand:new THREE.Vector3(-2.6,0,10.6), ring:new THREE.Vector3(1.4,0,12.2),   r:2.4, open:"Leave an offering" },
   bone_garden:    { name:"The Bone Garden",    pos:new THREE.Vector3(13,0,0),    stand:new THREE.Vector3(12,0,3),     ring:new THREE.Vector3(13,0,4.6),   r:2.4, open:"Read his letters" },
   ledger_shop:    { name:"The Ledger Shop",    pos:new THREE.Vector3(25,0,-8),   stand:new THREE.Vector3(22,0,-3.4),  ring:new THREE.Vector3(25,0,-2.4),  r:2.4, open:"Browse the shop" },
   grand_library:  { name:"The Grand Library",  pos:new THREE.Vector3(0,0,-25),   stand:new THREE.Vector3(0,0,-16.8), ring:new THREE.Vector3(0,0,-14.8), r:2.6, open:"Enter the Grand Library" },
+  trading_lab:    { name:"The Trading Lab",     pos:new THREE.Vector3(28,0,1),    stand:new THREE.Vector3(28,0,5.1),   ring:new THREE.Vector3(28,0,7.1),   r:2.5, open:"Explore the Trading Lab" },
 };
 const KEYS = Object.keys(PLACES);
 const solids = []; // {x,z,r} simple circle colliders
@@ -173,21 +176,16 @@ function gravesHouse(){
   const nightWood = M(0x302b46), moonstone = M(0x6d7397), blueTimber = M(0x34476b);
   const glass = glow(0x8eb7ff, 1.7), hearthLight = glow(0xffb86b, 2.1);
   const roofMat = M(0x27345b), timber = M(0x46374e);
-  // Front of the house faces the walkable south-eastward porch (+z).
   add(new THREE.BoxGeometry(8.4,.65,7.7), MAT.stoneDark, 0,.32,0,g);
   add(new THREE.BoxGeometry(7.4,3.9,6.7),moonstone,0,2.25,0,g);
   add(new THREE.BoxGeometry(6.7,2.8,6.1),nightWood,0,5.5,0,g);
   const roof = add(new THREE.ConeGeometry(6.15,4.5,4),roofMat,0,8.75,0,g);
   roof.rotation.y=Math.PI/4; roof.scale.z=.8;
-  // Half-timber framing with the familiar necromancer violet silhouette.
   for(const x of [-3.5,3.5]){
     add(new THREE.BoxGeometry(.25,6.5,.32),timber,x,3.5,3.5,g);
     add(new THREE.BoxGeometry(.28,5.5,.28),blueTimber,x,3.3,-3.38,g);
   }
-  for(const y of [3.7,6.65]){
-    add(new THREE.BoxGeometry(7.6,.3,.34),timber,0,y,3.54,g);
-  }
-  // The warm doorway, porch platform and porch lanterns.
+  for(const y of [3.7,6.65]) add(new THREE.BoxGeometry(7.6,.3,.34),timber,0,y,3.54,g);
   add(new THREE.BoxGeometry(3.2,.3,3.5),MAT.stoneDark,0,.22,5.18,g);
   add(new THREE.BoxGeometry(1.8,2.95,.22),MAT.face,0,1.7,3.58,g);
   add(new THREE.BoxGeometry(1.52,2.74,.15),MAT.wood,0,1.7,3.72,g);
@@ -198,31 +196,23 @@ function gravesHouse(){
     add(new THREE.ConeGeometry(.4,.38,6),MAT.iron,x,3.72,5.43,g);
   }
   add(new THREE.BoxGeometry(5.5,.32,.7),roofMat,0,4.2,5.37,g);
-  // Blue-glass windows, outlined in iron, with a cross-like mullion.
-  for(const x of [-2.3,2.3]){
-    for(const y of [2.3,5.55]){
-      add(new THREE.BoxGeometry(1.45,1.65,.16),glass,x,y,3.55,g);
-      add(new THREE.BoxGeometry(.1,1.8,.22),MAT.iron,x,y,3.7,g);
-      add(new THREE.BoxGeometry(1.55,.1,.22),MAT.iron,x,y,3.71,g);
-    }
+  for(const x of [-2.3,2.3]) for(const y of [2.3,5.55]){
+    add(new THREE.BoxGeometry(1.45,1.65,.16),glass,x,y,3.55,g);
+    add(new THREE.BoxGeometry(.1,1.8,.22),MAT.iron,x,y,3.7,g);
+    add(new THREE.BoxGeometry(1.55,.1,.22),MAT.iron,x,y,3.71,g);
   }
-  // The loft's circular observatory window, above the entrance.
   add(new THREE.CircleGeometry(.65,24),glass,0,7.6,3.6,g);
   add(new THREE.TorusGeometry(.73,.12,8,24),moonstone,0,7.6,3.7,g);
   add(new THREE.BoxGeometry(.09,1.37,.16),blueTimber,0,7.6,3.72,g);
   add(new THREE.BoxGeometry(1.35,.09,.16),blueTimber,0,7.6,3.73,g);
-  // A small book tower and smoky chimney keep the house unmistakable.
   add(new THREE.BoxGeometry(1.5,6.9,1.5),nightWood,3.4,5.4,-2,g);
   add(new THREE.ConeGeometry(1.35,3.8,5),MAT.roof,3.4,10.4,-2,g);
   add(new THREE.BoxGeometry(1.1,3,.9),MAT.stoneDark,-2.3,9.1,-2.6,g);
   add(new THREE.BoxGeometry(1.48,.3,1.2),moonstone,-2.3,10.6,-2.6,g);
-  // Cottage sign and a hearth light that can be found at night.
-  const inscription = textTexture("GRAVES' HOUSE",768,150,'#e0edff','#172440');
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.25,.85),
-    new THREE.MeshStandardMaterial({map:inscription,emissive:0x8eb7ff,emissiveMap:inscription,emissiveIntensity:.4}));
+  const inscription=textTexture("GRAVES' HOUSE",768,150,'#e0edff','#172440');
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(4.25,.85),new THREE.MeshStandardMaterial({map:inscription,emissive:0x8eb7ff,emissiveMap:inscription,emissiveIntensity:.4}));
   sign.position.set(0,4.4,5.75);g.add(sign);
-  const warm=new THREE.PointLight(0xffb86b,4,12,1.6);warm.position.set(0,3.25,5.4);g.add(warm);
-  flickers.push({light:warm,base:4,ph:1.8});
+  const warm=new THREE.PointLight(0xffb86b,4,12,1.6);warm.position.set(0,3.25,5.4);g.add(warm);flickers.push({light:warm,base:4,ph:1.8});
   const blue=new THREE.PointLight(0x8eb7ff,3,12,1.8);blue.position.set(0,7,4.4);g.add(blue);
   solids.push({x:p.x,z:p.z,r:4.9});
 }
@@ -296,6 +286,45 @@ function grandLibrary(){
   }
   solids.push({x:p.x,z:p.z,r:7.4});
 }
+const tradingLabOrbits = [];
+function tradingLab(){
+  const p = PLACES.trading_lab.pos, g = new THREE.Group(); g.position.copy(p); scene.add(g);
+  const blueStone = M(0x33445e), paleStone = M(0x807b9b), brass = M(0x8d7044,{metalness:.65,roughness:.42});
+  const glass = M(0x468b91,{transparent:true,opacity:.48,metalness:.28,roughness:.28,side:THREE.DoubleSide});
+  const tealGlow = glow(0x80e5d1,2.5), goldGlow = glow(0xffc96b,2.4);
+  // A compact observatory and ledger hall at the east end of the lantern road.
+  add(new THREE.BoxGeometry(8.4,.55,7.2),MAT.stoneDark,0,.28,0,g);
+  add(new THREE.CylinderGeometry(3.6,3.9,4.1,10),blueStone,0,2.55,0,g);
+  add(new THREE.CylinderGeometry(3.8,3.8,.28,10),paleStone,0,4.55,0,g);
+  const dome = add(new THREE.SphereGeometry(3.55,12,8,0,Math.PI*2,0,Math.PI/2),glass,0,4.62,0,g); dome.scale.z=.86;
+  const orbit = add(new THREE.TorusGeometry(3.15,.09,8,32),brass,0,4.8,0,g); orbit.rotation.x=Math.PI/2; tradingLabOrbits.push({mesh:orbit,speed:.12});
+  const upperOrbit = add(new THREE.TorusGeometry(2.1,.065,8,28),tealGlow,0,5.25,0,g); upperOrbit.rotation.set(.82,0,.25); tradingLabOrbits.push({mesh:upperOrbit,speed:-.18});
+  // Recessed front entry, porch and illuminated windows.
+  add(new THREE.BoxGeometry(2.2,3.2,.2),MAT.face,0,1.7,3.48,g);
+  add(new THREE.BoxGeometry(1.8,2.8,.16),M(0x25304a),0,1.55,3.62,g);
+  add(new THREE.SphereGeometry(.12,8,6),goldGlow,.58,1.6,3.74,g);
+  add(new THREE.BoxGeometry(3.1,.35,1.8),MAT.stoneDark,0,.2,4.15,g);
+  for(const x of [-2.55,2.55]){
+    add(new THREE.CylinderGeometry(.16,.22,3.4,7),paleStone,x,1.9,3.2,g);
+    add(new THREE.SphereGeometry(.18,7,5),goldGlow,x,3.68,3.2,g);
+    add(new THREE.BoxGeometry(.66,1.7,.16),tealGlow,x,2.25,2.68,g);
+  }
+  const signTexture=textTexture('TRADING LAB',640,144,'#d7fff5','#18343b');
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(4.9,1.1),new THREE.MeshStandardMaterial({map:signTexture,emissive:0x80e5d1,emissiveMap:signTexture,emissiveIntensity:.7}));
+  sign.position.set(0,4.15,3.73); g.add(sign);
+  // The chart desk and brass telescope show the room's research purpose from outside.
+  add(new THREE.BoxGeometry(2.4,.2,1.2),MAT.wood,-4.2,.9,1.6,g);
+  add(new THREE.BoxGeometry(.13,.85,.13),MAT.iron,-5.15,.44,1.2,g); add(new THREE.BoxGeometry(.13,.85,.13),MAT.iron,-3.25,.44,1.2,g);
+  const chartTexture=textTexture('DAILY BARS',384,192,'#d7fff5','#1d3340');
+  add(new THREE.PlaneGeometry(1.55,.84),new THREE.MeshStandardMaterial({map:chartTexture,emissive:0x80e5d1,emissiveIntensity:.35}),-4.2,1.02,1.6,g).rotation.x=-Math.PI/2;
+  const scope=new THREE.Group(); scope.position.set(4.05,1.25,.65); scope.rotation.z=-.48; scope.rotation.x=.72; g.add(scope);
+  add(new THREE.CylinderGeometry(.18,.26,2.35,8),brass,0,0,0,scope);
+  add(new THREE.CylinderGeometry(.3,.3,.25,8),tealGlow,0,.98,0,scope);
+  for(const x of [-.75,.75]){ const leg=add(new THREE.CylinderGeometry(.07,.12,1.6,6),MAT.iron,4.05+x,.8,.65,g); leg.rotation.z=x<0?-.42:.42; }
+  const coolLight=new THREE.PointLight(0x80e5d1,5,16,1.7); coolLight.position.set(0,5,4.5); g.add(coolLight); flickers.push({light:coolLight,base:5,ph:1});
+  const warmLight=new THREE.PointLight(0xffc96b,3,11,1.8); warmLight.position.set(-3,2.6,4.3); g.add(warmLight); flickers.push({light:warmLight,base:3,ph:3.6});
+  solids.push({x:p.x,z:p.z,r:4.35});
+}
 const stoneNote = new THREE.Group();
 function offeringStone(){
   const p = PLACES.offering_stone.pos, g = new THREE.Group(); g.position.copy(p); scene.add(g);
@@ -338,12 +367,29 @@ function gravestone(x, z){ const g = new THREE.Group(); g.position.set(x, 0, z);
   else { add(new THREE.BoxGeometry(.16, 1.3, .16), MAT.stone, 0, .65, 0, g); add(new THREE.BoxGeometry(.7, .16, .16), MAT.stone, 0, .95, 0, g); }
   solids.push({ x, z, r: .5 }); }
 
-crypt(); gravesHouse(); shop(); offeringStone(); boneGarden(); grandLibrary();
+crypt(); gravesHouse(); shop(); offeringStone(); boneGarden(); grandLibrary(); tradingLab();
  // a processional cobble walk draws the eye from the old square to the new archive
 {
   const geo=new THREE.CylinderGeometry(.34,.38,.1,6), inst=new THREE.InstancedMesh(geo,MAT.stoneDark,110), d=new THREE.Object3D(); let n=0;
   for(let z=-14.5;z<2.5;z+=.62) for(let x of [-.72,0,.72]){
     d.position.set(x,.045,z+(rnd()-.5)*.16); d.rotation.y=rnd()*2; d.scale.setScalar(.78+rnd()*.3); d.updateMatrix(); inst.setMatrixAt(n++,d.matrix);
+  }
+  inst.count=n; inst.receiveShadow=true; scene.add(inst);
+}
+// A narrower side lane joins Lantern Road to the observatory courtyard.
+{
+  const stops=[[23,-2],[27,-3.2],[32,-3.8],[34,-1],[34,2],[31.5,5],[28,7.1]];
+  const geo=new THREE.CylinderGeometry(.33,.38,.1,6), inst=new THREE.InstancedMesh(geo,MAT.stoneDark,180), d=new THREE.Object3D(); let n=0;
+  for(let j=0;j<stops.length-1;j++){
+    const [ax,az]=stops[j],[bx,bz]=stops[j+1],dx=bx-ax,dz=bz-az,length=Math.hypot(dx,dz),steps=Math.ceil(length/.62),nx=-dz/length,nz=dx/length;
+    for(let i=0;i<=steps&&n<180;i++){
+      const t=i/steps;
+      for(const side of [-.62,0,.62]){
+        if(n>=180)break;
+        d.position.set(ax+dx*t+nx*(side+(rnd()-.5)*.18),.045,az+dz*t+nz*(side+(rnd()-.5)*.18));
+        d.rotation.y=rnd()*2; d.scale.setScalar(.78+rnd()*.3); d.updateMatrix(); inst.setMatrixAt(n++,d.matrix);
+      }
+    }
   }
   inst.count=n; inst.receiveShadow=true; scene.add(inst);
 }
@@ -353,6 +399,38 @@ for (let i = 0; i < 16; i++){ const x = -30 + rnd() * 14, z = -16 + rnd() * 6; i
 for (let i = 0; i < 8; i++){ gravestone(-4 + rnd() * 10, -6 - rnd() * 5); }
 // distant spires for silhouette
 for (let i = 0; i < 26; i++){ const a = i / 26 * Math.PI * 2 + rnd() * .2, r = 70 + rnd() * 30, h = 10 + rnd() * 30; const m = add(new THREE.ConeGeometry(2 + rnd() * 4, h, 5), MAT.stoneDark, Math.cos(a) * r, h / 2 - 2, Math.sin(a) * r); m.castShadow = false; }
+
+function makeTownResident(info,index){
+  const root=new THREE.Group(), body=new THREE.Group(); root.name='town-resident-'+info.id; root.add(body); scene.add(root);
+  const robe=M(info.robe,{emissive:info.robe,emissiveIntensity:.12}), accent=glow(info.accent,2.8);
+  add(new THREE.ConeGeometry(.52,1.18,8),robe,0,.66,0,body);
+  const hood=add(new THREE.SphereGeometry(.34,10,8),robe,0,1.34,0,body); hood.scale.set(1,.94,1.05);
+  add(new THREE.SphereGeometry(.215,8,6),MAT.face,0,1.31,.265,body);
+  for(const x of [-.09,.09]) add(new THREE.SphereGeometry(.045,6,5),accent,x,1.35,.45,body);
+  const armL=new THREE.Group(),armR=new THREE.Group(); armL.position.set(-.31,1.02,0); armR.position.set(.31,1.02,0); body.add(armL,armR);
+  add(new THREE.CylinderGeometry(.085,.12,.48,6),robe,0,-.19,0,armL).rotation.z=-.38;
+  add(new THREE.CylinderGeometry(.085,.12,.48,6),robe,0,-.19,0,armR).rotation.z=.38;
+  if(info.prop==='lantern'){
+    add(new THREE.CylinderGeometry(.045,.045,.25,5),MAT.iron,.02,-.46,0,armR);
+    add(new THREE.BoxGeometry(.22,.25,.18),accent,.02,-.68,0,armR);
+  }else if(info.prop==='book'){
+    add(new THREE.BoxGeometry(.33,.38,.1),MAT.roof,.02,-.43,.02,armR);
+    add(new THREE.BoxGeometry(.27,.32,.025),MAT.paper,.02,-.43,.08,armR);
+  }else if(info.prop==='flower'){
+    add(new THREE.CylinderGeometry(.025,.04,.55,5),MAT.bark,.02,-.5,0,armR);
+    add(new THREE.SphereGeometry(.18,7,6),accent,.02,-.18,0,armR);
+  }else if(info.prop==='satchel'){
+    add(new THREE.BoxGeometry(.3,.34,.2),MAT.wood,-.31,.77,-.08,body);
+    add(new THREE.BoxGeometry(.32,.055,.035),MAT.paper,-.31,.77,.04,body);
+  }else{
+    add(new THREE.CylinderGeometry(.11,.13,.22,7),MAT.paper,.02,-.48,0,armR).rotation.z=Math.PI/2;
+    add(new THREE.CylinderGeometry(.045,.045,.12,7),MAT.wood,.02,-.48,.12,armR).rotation.z=Math.PI/2;
+  }
+  const label=document.createElement('div'); label.className='townfolk-label'; label.textContent=info.name+' · '+info.role; $('#labels').appendChild(label);
+  const route=info.route.map(point=>new THREE.Vector3(point.x,0,point.z)); root.position.copy(route[0]);
+  return {root,body,armL,armR,route,targetIndex:1,wait:index*.45,speed:.7+(index%2)*.1,phase:index*1.7,label};
+}
+const townResidents=TOWN_RESIDENTS.map(makeTownResident);
 
 /* ---------- ground rings at each place ---------- */
 const rings = {}, ringMat = new THREE.MeshBasicMaterial({ color: 0xffc96b, transparent: true, opacity: .55, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
@@ -500,11 +578,32 @@ function updateTravel(){
 $('#travel').addEventListener('click', e => { const button = e.target.closest('button'); if (button?.dataset.atlas){ show('atlas'); return; } const k = button?.dataset.go; if (k){ goTo(PLACES[k].ring.clone(), k); } });
 let pendingOpen = null;
 function goTo(v, openKey){ moveTarget.copy(v); hasTarget = true; marker.visible = true; marker.position.set(v.x, .07, v.z); pendingOpen = openKey || null; audio.chime(); }
-function show(id){ closeAll(); const p = document.getElementById(id); if (!p) return; p.hidden = false; openPanel = id; if (id === 'atlas') renderAtlas(); if (id === 'p-ledger_shop' && !$('#shop').children.length && window.renderShop) window.renderShop(); }
-function closeAll(){ document.querySelectorAll('.panel').forEach(p => p.hidden = true); openPanel = null; }
+const WATCH_STEPS = [
+  { id:'town', label:'Shape the living town' },
+  { id:'research', label:'Build Graves’ local research desk' },
+  { id:'voice', label:'Add streaming voice and text chat' },
+  { id:'checks', label:'Check the finished build' },
+  { id:'live', label:'Bring the build to the live world' },
+];
+let watchTimer = null;
+function setWatchStatus(message,kind=''){const status=$('#watch-status');status.textContent=message;status.className='chat-status'+(kind?' '+kind:'');}
+async function refreshWorkWatch(){
+ try{
+  const response=await fetch(brainBase()+'/api/work-watch',{cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Progress is not available.');
+  const byId=new Map((Array.isArray(data.steps)?data.steps:[]).map(step=>[step.id,step.status]));
+  const list=$('#watch-steps');list.replaceChildren();let completed=0;
+  for(const step of WATCH_STEPS){const status=['queued','active','complete'].includes(byId.get(step.id))?byId.get(step.id):'queued';if(status==='complete')completed++;const row=document.createElement('li');row.className='watch-step '+status;const marker=document.createElement('span');marker.className='step-marker';marker.setAttribute('aria-hidden','true');marker.textContent=status==='complete'?'✓':status==='active'?'✦':'·';const label=document.createElement('span');label.textContent=step.label;const state=document.createElement('small');state.textContent=status==='complete'?'Done':status==='active'?'In progress':'Waiting';row.append(marker,label,state);list.appendChild(row);}
+  const total=WATCH_STEPS.length,percent=Math.round(completed/total*100),meter=$('#watch-meter-fill').parentElement;$('#watch-meter-fill').style.width=percent+'%';meter.setAttribute('aria-valuemax',String(total));meter.setAttribute('aria-valuenow',String(completed));meter.setAttribute('aria-valuetext',`${completed} of ${total} milestones complete`);
+  const active=WATCH_STEPS.find(step=>byId.get(step.id)==='active');setWatchStatus(active?`Working now · ${active.label}`:`${completed} of ${total} build milestones complete`,'connected');
+ }catch(error){setWatchStatus('The local progress window is offline. Start the Graves local bridge to see live milestones.','error');}
+}
+function startWorkWatch(){clearInterval(watchTimer);refreshWorkWatch();watchTimer=setInterval(refreshWorkWatch,1800);}
+function show(id){ closeAll(); const p = document.getElementById(id); if (!p) return; p.hidden = false; openPanel = id; if (id === 'atlas') renderAtlas(); if (id === 'p-ledger_shop' && !$('#shop').children.length && window.renderShop) window.renderShop(); if(id==='p-work_watch')startWorkWatch(); }
+function closeAll(){ document.querySelectorAll('.panel').forEach(p => p.hidden = true); clearInterval(watchTimer);watchTimer=null;openPanel = null; }
 document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => { if (e.target === p || e.target.classList.contains('x') || e.target.classList.contains('go')) closeAll(); }));
 $('#promptb').addEventListener('click', () => nearPlace && show('p-' + nearPlace));
 $('#helpb').addEventListener('click', () => show('help'));
+$('#watchb').addEventListener('click', () => show('p-work_watch'));
 $('#atlas-clear-waymark').addEventListener('click', () => { activeWaypoint = null; try { localStorage.removeItem(WORLD_WAYPOINT_KEY); } catch {} updateCompass(); renderAtlas(); toast('Waymark cleared'); });
 $('#atlas-landmarks').addEventListener('click', e => { const button = e.target.closest('button[data-waymark]'); if (!button) return; const target = resolveLandmarkId(button.dataset.waymark); if (!target) return; activeWaypoint = target; try { localStorage.setItem(WORLD_WAYPOINT_KEY, target.id); } catch {} closeAll(); updateCompass(); toast('Waymark set · ' + target.name); });
 $('#qual').addEventListener('click', () => { QUALITY = (QUALITY + 1) % 3; renderScale = 1; localStorage.setItem('g3d_q', QUALITY); applyQuality(); toast(['Graphics: low (fast)', 'Graphics: medium', 'Graphics: high'][QUALITY]); });
@@ -537,8 +636,79 @@ $('#snd').addEventListener('click', () => { const on = audio.toggle(); $('#snd')
 
 /* ---------- private in-world conversation with the local Graves brain ---------- */
 const chatMessages = [];
+const savedPrivateBrain = () => localStorage.getItem('graves_brain_url');
+const brainBase = () => {
+  const saved = savedPrivateBrain();
+  return saved ? normalizePrivateBrainUrl(saved) : 'http://127.0.0.1:8787';
+};
+const researchForm=$('#web-research-form'),researchQuery=$('#web-research-query'),researchStatus=$('#web-research-status'),researchResults=$('#web-research-results'),researchStudyButton=$('#web-research-study'),researchStudyResult=$('#web-research-study-result'),researchSaveButton=$('#web-research-save');
+let currentResearchResults=[],currentStudy=null;
+function setResearchStatus(message,kind=''){researchStatus.textContent=message;researchStatus.className='chat-status'+(kind?' '+kind:'');}
+async function researchPost(endpoint,payload){
+ const response=await fetch(brainBase()+'/api/research/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+ const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'The local research desk could not complete that request.');return data;
+}
+function selectedResearchResults(){return [...researchResults.querySelectorAll('input[type="checkbox"]:checked')].map(input=>currentResearchResults[Number(input.dataset.resultIndex)]).filter(Boolean);}
+$('#open-web-research').addEventListener('click',()=>{show('p-web_research');setTimeout(()=>researchQuery.focus(),120);});
+researchForm.addEventListener('submit',async event=>{
+ event.preventDefault();const query=researchQuery.value.trim();if(!query)return;
+ currentResearchResults=[];currentStudy=null;researchResults.replaceChildren();researchStudyResult.hidden=true;researchStudyButton.disabled=true;researchSaveButton.disabled=false;setResearchStatus('Searching public pages…');
+ const searchButton=$('#web-research-search');searchButton.disabled=true;
+ try{
+  const data=await researchPost('search',{query});currentResearchResults=Array.isArray(data.results)?data.results:[];
+  if(!currentResearchResults.length){setResearchStatus('No public results were returned. Try a different phrase.');return;}
+  currentResearchResults.forEach((result,index)=>{
+   const card=document.createElement('label');card.className='web-research-result';
+   const check=document.createElement('input');check.type='checkbox';check.dataset.resultIndex=String(index);check.setAttribute('aria-label','Select '+result.title+' for Graves to study');
+   const title=document.createElement('strong');title.textContent=result.title;
+   const address=document.createElement('span');address.className='source-url';address.textContent=result.url;
+   const snippet=document.createElement('span');snippet.className='snippet';snippet.textContent=result.snippet||'Public web result';
+   card.append(check,title,address,snippet);researchResults.appendChild(card);
+  });
+  setResearchStatus(`${currentResearchResults.length} public results. Choose up to three pages for Graves to read.`,'connected');
+ }catch(error){setResearchStatus(error.message,'error');}
+ finally{searchButton.disabled=false;}
+});
+function updateResearchSelection(event){
+ if(event.target.matches('input[type="checkbox"]')){
+  const checked=selectedResearchResults();if(event.target.checked&&checked.length>3)event.target.checked=false;
+ }
+ researchStudyButton.disabled=selectedResearchResults().length===0;
+}
+researchResults.addEventListener('change',updateResearchSelection);
+researchStudyButton.addEventListener('click',async()=>{
+ const selected=selectedResearchResults().slice(0,3);if(!selected.length)return;
+ researchStudyButton.disabled=true;researchSaveButton.disabled=true;researchStudyResult.hidden=true;setResearchStatus('Graves is reading selected public pages and consulting the local model…');
+ try{
+  const data=await researchPost('study',{question:researchQuery.value.trim(),sources:selected.map(({title,url})=>({title,url}))});
+  currentStudy={...data.study,sources:data.sources};renderResearchStudy(currentStudy);researchStudyResult.hidden=false;researchSaveButton.disabled=false;setResearchStatus('Study complete. Check the source links, then save it if you want Graves to remember it.','connected');
+ }catch(error){setResearchStatus(error.message,'error');}
+ finally{researchStudyButton.disabled=selectedResearchResults().length===0;}
+});
+function renderResearchStudy(study){
+ $('#web-research-title').textContent=study.title;$('#web-research-overview').textContent=study.overview;
+ const citations=$('#web-research-citations');citations.replaceChildren();
+ const citationHeading=document.createElement('strong');citationHeading.textContent='Sources';citations.appendChild(citationHeading);
+ (study.sources||[]).forEach((source,index)=>{const row=document.createElement('p');const link=document.createElement('a');link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=`[${index+1}] ${source.title} ↗`;row.appendChild(link);citations.appendChild(row);});
+ const findings=$('#web-research-findings');findings.replaceChildren();
+ for(const finding of study.findings||[]){
+  const row=document.createElement('p');row.className='finding';row.append(document.createTextNode(finding.text+' '));
+  for(const id of finding.source_ids||[]){const source=study.sources[id-1];if(!source)continue;const link=document.createElement('a');link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=`[${id}] ${source.title} ↗`;row.append(link,document.createTextNode(' '));}
+  findings.appendChild(row);
+ }
+ const unknowns=$('#web-research-unknowns');unknowns.replaceChildren();
+ if(study.unknowns?.length){const heading=document.createElement('strong');heading.textContent='Questions to check';const text=document.createElement('p');text.textContent=study.unknowns.join(' · ');unknowns.append(heading,text);}
+}
+researchSaveButton.addEventListener('click',async()=>{
+ if(!currentStudy)return;researchSaveButton.disabled=true;setResearchStatus('Saving this source-linked note in the local private research shelf…');
+ try{await researchPost('save',currentStudy);setResearchStatus('Saved locally. Graves can use this note in future conversations. Nothing was added to the public town.','connected');}
+ catch(error){setResearchStatus(error.message,'error');researchSaveButton.disabled=false;}
+});
+const chatStatus = $('#chat-status'), chatList = $('#chat-messages'), chatInput = $('#chat-input');
+let chatBusy=false;
+function setChatStatus(message, kind=''){ chatStatus.textContent=message; chatStatus.className='chat-status'+(kind?' '+kind:''); }
 const voice = createBrowserVoiceController({
-  input: $('#chat-input'),
+  input: chatInput,
   dictationButton: $('#chat-mic'),
   spokenRepliesButton: $('#chat-voice'),
   status: $('#voice-status')
@@ -548,11 +718,6 @@ $('#home-speak').addEventListener('click', () => {
   voice.speak(gravesLine(), { explicit: true });
 });
 $('#home-talk').addEventListener('click', () => $('#talkb').click());
-const savedPrivateBrain = () => localStorage.getItem('graves_brain_url');
-const brainBase = () => {
-  const saved = savedPrivateBrain();
-  return saved ? normalizePrivateBrainUrl(saved) : 'http://127.0.0.1:8787';
-};
 const brainUrlInput = $('#brain-url');
 brainUrlInput.value = savedPrivateBrain() || '';
 $('#brain-connect-button').addEventListener('click', () => {
@@ -568,14 +733,12 @@ $('#brain-disconnect-button').addEventListener('click', () => {
   brainUrlInput.value = '';
   checkBrain();
 });
-const chatStatus = $('#chat-status'), chatList = $('#chat-messages'), chatInput = $('#chat-input');
-function setChatStatus(message, kind=''){ chatStatus.textContent=message; chatStatus.className='chat-status'+(kind?' '+kind:''); }
 function addChatMessage(role, content){
   const empty=chatList.querySelector('.chat-empty'); if(empty) empty.remove();
   const item=document.createElement('div'); item.className='chat-message '+(role==='assistant'?'graves':'operator');
   const who=document.createElement('span'); who.className='speaker'; who.textContent=role==='assistant'?'Graves':'You';
-  const body=document.createElement('span'); body.textContent=content;
-  item.append(who,body); chatList.appendChild(item); chatList.scrollTop=chatList.scrollHeight;
+  const body=document.createElement('span'); body.className='message-body';body.textContent=content;
+  item.append(who,body); chatList.appendChild(item); chatList.scrollTop=chatList.scrollHeight;return {item,body};
 }
 function worldContext(){return {place:nearPlace?PLACES[nearPlace].name:null,location:STATE?.location||null,mood:STATE?.mood?.label||null,activity:STATE?.activity||null,thought:short(STATE?.thought||'',260),day:STATE?.day||null};}
 async function checkBrain(){
@@ -589,14 +752,15 @@ async function checkBrain(){
 }
 $('#talkb').addEventListener('click',()=>{show('p-conversation');checkBrain();setTimeout(()=>chatInput.focus(),120);});
 $('#chat-form').addEventListener('submit',async e=>{
-  e.preventDefault();const message=chatInput.value.trim();if(!message)return;
-  const send=$('#chat-send');chatInput.value='';chatMessages.push({role:'user',content:message});addChatMessage('user',message);send.disabled=true;setChatStatus('Graves is gathering his thoughts…');
-  try{const r=await fetch(brainBase()+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'The local mind could not answer.');const reply=String(data.reply||'The lantern flickers, but no words came through.').slice(0,5000);chatMessages.push({role:'assistant',content:reply});addChatMessage('assistant',reply);voice.speak(reply);setChatStatus('Connected · '+(data.model||'local model'),'connected');$('#proposal-button').disabled=false;}
-  catch(err){chatMessages.pop();chatInput.value=message;setChatStatus(err.message+' Check the local bridge and try again.','error');}
-  finally{send.disabled=false;chatInput.focus();}
+  e.preventDefault();const message=chatInput.value.trim();if(!message||chatBusy)return;voice.stopListening();
+  const send=$('#chat-send');chatInput.value='';chatMessages.push({role:'user',content:message});addChatMessage('user',message);send.disabled=true;chatBusy=true;setChatStatus('Graves is replying as he gathers his thoughts…');
+  let assistantBubble=null;
+  try{const r=await fetch(brainBase()+'/api/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});assistantBubble=addChatMessage('assistant','');const data=await readChatStream(r,text=>{assistantBubble.body.textContent=text;chatList.scrollTop=chatList.scrollHeight;});const reply=data.reply;chatMessages.push({role:'assistant',content:reply});assistantBubble.body.textContent=reply;setChatStatus('Connected · '+data.model+' · reply streamed from your local model','connected');voice.speak(reply);$('#proposal-button').disabled=false;}
+  catch(err){if(assistantBubble)assistantBubble.item.remove();chatMessages.pop();chatInput.value=message;setChatStatus(err.message+' Check the local bridge and try again.','error');}
+  finally{send.disabled=false;chatBusy=false;chatInput.focus();}
 });
 chatInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#chat-form').requestSubmit();}});
-$('#chat-clear').addEventListener('click',()=>{voice.stopListening();chatMessages.length=0;chatList.innerHTML='<div class="chat-empty">The lantern is waiting. Start us off.</div>';$('#proposal-button').disabled=true;$('#proposal-result').hidden=true;setChatStatus('Conversation cleared. This session was not saved.');});
+$('#chat-clear').addEventListener('click',()=>{voice.stopListening();chatMessages.length=0;chatList.replaceChildren();const empty=document.createElement('div');empty.className='chat-empty';empty.textContent='The lantern is waiting. Start us off.';chatList.appendChild(empty);$('#proposal-button').disabled=true;$('#proposal-result').hidden=true;setChatStatus('Conversation cleared. This session was not saved.');});
 $('#proposal-button').addEventListener('click',async()=>{
   if(!chatMessages.length)return;const button=$('#proposal-button');button.disabled=true;button.textContent='Drafting proposal…';
   try{const r=await fetch(brainBase()+'/api/propose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Could not create a proposal.');const p=data.proposal,box=$('#proposal-result');box.hidden=false;box.replaceChildren();const title=document.createElement('h3');title.textContent='Proposal saved to your private vault';const name=document.createElement('p');name.textContent=p.title+' · '+p.kind;const summary=document.createElement('p');summary.textContent=p.summary;const details=document.createElement('p');details.textContent=(p.design_notes||[]).join(' • ');const status=document.createElement('p');status.textContent='Review required · Not applied to the world';box.append(title,name,summary,details,status);setChatStatus('Proposal saved locally for review. Nothing has been published.','connected');}
@@ -604,11 +768,6 @@ $('#proposal-button').addEventListener('click',async()=>{
   finally{button.disabled=false;button.textContent='✧ Turn this conversation into a build proposal';}
 });
 
-
-// Direct arrival from the 2D fallback, without changing private mind state.
-if (new URLSearchParams(location.search).get('place') === 'graves_house') {
-  goTo(PLACES.graves_house.ring.clone(), 'graves_house');
-}
 
 /* ---------- input: tap/click to move, drag to orbit, pinch/scroll zoom, WASD ---------- */
 const cam = { yaw: 0.0, pitch: MOBILE ? .55 : 0.42, dist: MOBILE ? 15 : 12, look: new THREE.Vector3() };
@@ -898,6 +1057,24 @@ function processChunkQueue(){
   }
 }
 const tmp = new THREE.Vector3(), fwd = new THREE.Vector3();
+function stepTownResidents(dt){
+  for(const resident of townResidents){
+    if(resident.wait>0) resident.wait=Math.max(0,resident.wait-dt);
+    else{
+      const target=resident.route[resident.targetIndex]; tmp.copy(target).sub(resident.root.position); tmp.y=0; const distance=tmp.length();
+      if(distance<.22){ resident.targetIndex=(resident.targetIndex+1)%resident.route.length; resident.wait=1.2; }
+      else{
+        resident.root.position.add(tmp.multiplyScalar(Math.min(1,resident.speed*dt/distance)));
+        collide(resident.root.position,.3);
+        resident.root.rotation.y=Math.atan2(target.x-resident.root.position.x,target.z-resident.root.position.z);
+      }
+    }
+    resident.root.position.y=groundY(resident.root.position.x,resident.root.position.z)+.035+Math.sin(T*2.3+resident.phase)*.045;
+    resident.body.rotation.z=Math.sin(T*2+resident.phase)*.018;
+    resident.armL.rotation.x=Math.sin(T*4+resident.phase)*.16;
+    resident.armR.rotation.x=-Math.sin(T*4+resident.phase)*.16;
+  }
+}
 function stepWisp(dt){
   let ix = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0), iz = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
   const speed = 8;
@@ -963,6 +1140,7 @@ function frame(now){
   const dt = Math.min(.05, (now - last) / 1000); last = now; T += dt;
   if (!openPanel){ stepWisp(dt); }
   stepGraves(dt);
+  stepTownResidents(dt);
   ensureWorldChunks();
   processChunkQueue();
   sky.position.copy(wisp.position); stars.position.set(wisp.position.x, 0, wisp.position.z);
@@ -982,12 +1160,14 @@ function frame(now){
   for (const m of mists){ m.s.position.x += m.v * dt; if (m.s.position.x > 35) m.s.position.x = -35; }
   for (const f of flowers){ f.m.position.y = f.y + Math.sin(T * 1.5 + f.ph) * .04; }
   for (const b of libraryMotes){ b.book.rotation.y = Math.sin(T*.65+b.phase)*.35; b.book.position.y = 8.9 + Math.sin(T*.8+b.phase)*.32; }
+  for (const orbit of tradingLabOrbits) orbit.mesh.rotation.y+=dt*orbit.speed;
   for (const k of KEYS){ const r = rings[k]; const here = STATE && STATE.location === k; r.material.opacity = (k === nearPlace ? .9 : .35 + Math.sin(T * 2 + k.length) * .15); r.material.color.set(here ? 0x8ff0c8 : 0xffc96b); r.scale.setScalar(1 + Math.sin(T * 2) * .04); }
   stoneNote.rotation.y += dt * .4;
   // HTML overlays
   const bub = $('#bubble'); if (toScreen(G.root.position, bub, 3.4, 34)){ const t = gravesLine(); if (bub._t !== t){ $('#btext').textContent = t; bub._t = t; } const hw = bub.offsetWidth / 2 + 8; bub.style.left = clamp(parseFloat(bub.style.left), hw, innerWidth - hw) + 'px'; bub.style.top = Math.max(parseFloat(bub.style.top), bub.offsetHeight + (innerWidth < 600 ? 120 : 112)) + 'px'; }
   toScreen(wisp.position, $('#tag-you'), .7, 30);
-  for (const k of KEYS){ toScreen(PLACES[k].pos, labelEls[k], k === 'offering_stone' ? 3 : k === 'bone_garden' ? 2.2 : 9, 60); }
+  for (const k of KEYS){ toScreen(PLACES[k].pos, labelEls[k], k === 'offering_stone' ? 3 : k === 'bone_garden' ? 2.2 : k === 'trading_lab' ? 8.2 : 9, 60); }
+  for (const resident of townResidents) toScreen(resident.root.position,resident.label,2,20);
   composer.render(dt);
   // Adapt render resolution while preserving the selected graphics level.
   frames++; if (dt > .028) slowFrames++;
