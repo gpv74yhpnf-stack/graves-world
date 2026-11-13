@@ -30,7 +30,7 @@ From a separate worktree after this stacked build is available:
     git worktree add --detach ..\graves-world-learning origin/graves-v2/autonomous-learning-engine-v1
     cd ..\graves-world-learning
 
-Make sure **Ollama** is running and `qwen3.5:4b` is installed.
+Make sure **Ollama** is running and a compatible local model is installed. Use `OLLAMA_MODEL` to select a different installed model (including the 9B model). The synthesizer requests `num_ctx: 16384` per call to support three source documents; this can require more memory and reduce speed.
 
 Run a single research experiment:
 
@@ -64,9 +64,17 @@ The public GitHub Pages version alone does not run the worker.
   redirect checks, response size limits, DNS pinning and no script execution.
   No account sign-in, cookies, arbitrary code execution, credential requests,
   paywall bypass, or privately hosted sources.
-- One research attempt every **90 minutes while watch mode is running**,
-  and at most **10 attempts per UTC day** even when manually invoked.
-  The core engine enforces a minimum 30-minute gap between attempts.
+- At most **one research attempt per minute while watch mode is running**,
+  and **10 attempts per UTC day** even when manually invoked.
+  The core engine enforces a minimum one-minute gap between attempts,
+  including failed attempts. Once the daily budget is exhausted, watch sleeps
+  until the next UTC day before trying again.
+- On any research error, **watch mode stops** instead of automatically
+  looping through the same failure. Inspect `npm run learning:status`, correct
+  the error, then manually restart `npm run learning:watch`. Some known
+  failures, such as insufficient Ollama context, are mitigated by the built-in
+  16K context setting. The worker does not edit its own source code, execute
+  repairs or silently bypass the daily limits.
 - Each cycle examines no more than eight search results, reads at most three
   useful public pages from different hostnames and makes at most one local
   Ollama synthesis call, with a 120-second timeout. Search-provider rate
