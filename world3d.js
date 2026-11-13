@@ -5,7 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { CHUNK_SIZE, CHUNK_LOAD_RADIUS, CHUNK_UNLOAD_RADIUS, UNDERWORLD_BIOMES, biomeForChunk, chunksAround, createChunkRandom, landmarkForCell, landmarkForChunk, worldGroundHeight } from './src/worldgen/undercroft.mjs';
+import { CHUNK_SIZE, CHUNK_LOAD_RADIUS, CHUNK_UNLOAD_RADIUS, UNDERWORLD_BIOMES, biomeForChunk, chunksAround, createChunkRandom, landmarkForCell, landmarkForChunk, landmarkInscriptionFor, worldGroundHeight } from './src/worldgen/undercroft.mjs';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -428,7 +428,7 @@ function gravesLine(){
 }
 
 /* ---------- HUD: travel buttons, prompt, panels ---------- */
-let nearPlace = null, openPanel = null;
+let nearPlace = null, nearLandmark = null, openPanel = null, fieldNoteReturnToAtlas = false;
 function updateTravel(){
   $('#travel').innerHTML = KEYS.map(k => `<button data-go="${k}" class="${STATE && STATE.location === k ? 'here' : ''}" title="${STATE && STATE.location === k ? 'Graves is here' : ''}">${STATE && STATE.location === k ? '💀 ' : ''}${PLACES[k].name.replace('The ', '')}</button>`).join('') + '<button data-atlas="true" title="Open your private underworld atlas">🗺 Atlas</button>';
 }
@@ -438,12 +438,13 @@ function goTo(v, openKey){ moveTarget.copy(v); hasTarget = true; marker.visible 
 function show(id){ closeAll(); const p = document.getElementById(id); if (!p) return; p.hidden = false; openPanel = id; if (id === 'atlas') renderAtlas(); if (id === 'p-ledger_shop' && !$('#shop').children.length && window.renderShop) window.renderShop(); }
 function closeAll(){ document.querySelectorAll('.panel').forEach(p => p.hidden = true); openPanel = null; }
 document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => { if (e.target === p || e.target.classList.contains('x') || e.target.classList.contains('go')) closeAll(); }));
-$('#promptb').addEventListener('click', () => nearPlace && show('p-' + nearPlace));
+$('#promptb').addEventListener('click', () => { if (nearPlace) show('p-' + nearPlace); else if (nearLandmark) inspectLandmark(nearLandmark); });
 $('#helpb').addEventListener('click', () => show('help'));
 $('#atlas-clear-waymark').addEventListener('click', () => { activeWaypoint = null; try { localStorage.removeItem(WORLD_WAYPOINT_KEY); } catch {} updateCompass(); renderAtlas(); toast('Waymark cleared'); });
-$('#atlas-landmarks').addEventListener('click', e => { const button = e.target.closest('button[data-waymark]'); if (!button) return; const target = resolveLandmarkId(button.dataset.waymark); if (!target) return; activeWaypoint = target; try { localStorage.setItem(WORLD_WAYPOINT_KEY, target.id); } catch {} closeAll(); updateCompass(); toast('Waymark set · ' + target.name); });
+$('#field-note-close').addEventListener('click', () => { if (fieldNoteReturnToAtlas){ fieldNoteReturnToAtlas = false; show('atlas'); } else closeAll(); });
+$('#atlas-landmarks').addEventListener('click', e => { const read = e.target.closest('button[data-inscription]'); if (read){ const landmark = resolveLandmarkId(read.dataset.inscription); if (landmark) inspectLandmark(landmark, true); return; } const button = e.target.closest('button[data-waymark]'); if (!button) return; const target = resolveLandmarkId(button.dataset.waymark); if (!target) return; activeWaypoint = target; try { localStorage.setItem(WORLD_WAYPOINT_KEY, target.id); } catch {} closeAll(); updateCompass(); toast('Waymark set · ' + target.name); });
 $('#qual').addEventListener('click', () => { QUALITY = (QUALITY + 1) % 3; renderScale = 1; localStorage.setItem('g3d_q', QUALITY); applyQuality(); toast(['Graphics: low (fast)', 'Graphics: medium', 'Graphics: high'][QUALITY]); });
-addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); if ((e.key === 'e' || e.key === 'Enter') && nearPlace && !openPanel && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) show('p-' + nearPlace); });
+addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); const focus = document.activeElement; if ((e.key === 'e' || e.key === 'Enter') && !openPanel && !focus.closest('button,a,input,textarea,select') && !/INPUT|TEXTAREA/.test(focus.tagName)){ if (nearPlace) show('p-' + nearPlace); else if (nearLandmark) inspectLandmark(nearLandmark); } });
 let toastT; function toast(t){ const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2200); }
 const labelEls = {}; for (const k of KEYS){ const d = document.createElement('div'); d.className = 'plabel'; d.textContent = PLACES[k].name; $('#labels').appendChild(d); labelEls[k] = d; }
 
@@ -740,13 +741,27 @@ function renderAtlas(){
     const biome = UNDERWORLD_BIOMES.find(item => item.id === site.biomeId);
     const meta = document.createElement('span'); meta.className = 'dim small'; meta.textContent = (biome?.name || 'Unknown region') + ' · ' + direction + ' · ' + Math.round(distance) + ' world units';
     const grid = document.createElement('span'); grid.className = 'dim small'; grid.textContent = 'Grid ' + (site.x >= 0 ? '+' : '') + Math.round(site.x) + ', ' + (site.z >= 0 ? '+' : '') + Math.round(site.z);
+    const actions = document.createElement('div'); actions.className = 'atlas-landmark-actions';
     const track = document.createElement('button'); track.type = 'button'; track.dataset.waymark = site.id; track.textContent = activeId === site.id ? 'Tracking' : 'Set direction';
     track.setAttribute('aria-label', (activeId === site.id ? 'Currently tracking ' : 'Set compass direction to ') + site.name);
-    card.append(title, meta, grid, track); landmarkList.appendChild(card);
+    const read = document.createElement('button'); read.type = 'button'; read.dataset.inscription = site.id; read.textContent = 'Read inscription';
+    read.setAttribute('aria-label', 'Read the inscription at ' + site.name);
+    actions.append(track, read);
+    card.append(title, meta, grid, actions); landmarkList.appendChild(card);
   }
   if (!sites.length){ const empty = document.createElement('p'); empty.className = 'dim small'; empty.textContent = 'No landmarks mapped yet. Named places will appear here as you find them.'; landmarkList.appendChild(empty); }
   landmarks.replaceChildren(landmarkList);
   $('#atlas-clear-waymark').disabled = !activeWaypoint;
+}
+
+function inspectLandmark(landmark, returnToAtlas = false){
+  if (!landmark) return;
+  fieldNoteReturnToAtlas = returnToAtlas;
+  const biome = UNDERWORLD_BIOMES.find(item => item.id === landmark.biomeId);
+  $('#field-note-title').textContent = landmark.name;
+  $('#field-note-region').textContent = (biome?.name || 'Unknown region') + ' · Grid ' + (landmark.x >= 0 ? '+' : '') + Math.round(landmark.x) + ', ' + (landmark.z >= 0 ? '+' : '') + Math.round(landmark.z);
+  $('#field-note-inscription').textContent = landmarkInscriptionFor(landmark);
+  show('field-note');
 }
 
 function saveWorldPosition(){
@@ -804,9 +819,21 @@ function stepWisp(dt){
   for (let i = TRAIL - 1; i > 0; i--){ trailPos[i * 3] = trailPos[(i - 1) * 3]; trailPos[i * 3 + 1] = trailPos[(i - 1) * 3 + 1] + .01; trailPos[i * 3 + 2] = trailPos[(i - 1) * 3 + 2]; }
   trailPos[0] = wisp.position.x + (Math.random() - .5) * .1; trailPos[1] = wisp.position.y; trailPos[2] = wisp.position.z + (Math.random() - .5) * .1; trailGeo.attributes.position.needsUpdate = true;
   whalo.material.opacity = .4 + Math.sin(T * 5) * .1;
-  // which place are we standing in?
+  // Places take priority; otherwise offer an inspection when a generated landmark is close.
   let near = null; for (const k of KEYS){ const r = PLACES[k].ring; if (Math.hypot(wisp.position.x - r.x, wisp.position.z - r.z) < 2.1) near = k; }
-  if (near !== nearPlace){ nearPlace = near; $('#prompt').hidden = !near; if (near){ $('#promptb').textContent = `✦ ${PLACES[near].open}`; audio.chime(); } }
+  let site = null, siteDistance = 6;
+  if (!near) for (const chunk of generatedChunks.values()){
+    const landmark = chunk.landmark; if (!landmark) continue;
+    const distance = Math.hypot(wisp.position.x - landmark.x, wisp.position.z - landmark.z);
+    if (distance < siteDistance){ site = landmark; siteDistance = distance; }
+  }
+  if (near !== nearPlace || site?.id !== nearLandmark?.id){
+    nearPlace = near; nearLandmark = site;
+    $('#prompt').hidden = !near && !site;
+    if (near) $('#promptb').textContent = `✦ ${PLACES[near].open}`;
+    else if (site) $('#promptb').textContent = `✦ Inspect ${site.name}`;
+    if (near || site) audio.chime();
+  }
 }
 function stepGraves(dt){
   const home = PLACES[graves.home], p = G.root.position;
