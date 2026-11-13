@@ -59,6 +59,7 @@
 <p>Beyond these doors: the Scriptorium, the Gallery, the Sound Chamber and shelves that will grow as the world does.</p>
 <p><a href="library.html" target="_blank" rel="noopener">Enter the Grand Library archive ↗</a></p>
 <p><button id="open-web-research" type="button">Open Graves' public web browser ✦</button></p>
+<p><button id="open-learning-progress" type="button">🧠 Open Graves' Learning Journal</button></p>
 <p class="dim small">The archive is a public catalogue. Its creative proposals remain separate from the living town until reviewed and approved.</p></div></div>
 
 <div id="p-web_research" class="panel" hidden><div class="pin research-pin"><button class="x" aria-label="Close Graves' web research">✕</button>
@@ -70,6 +71,18 @@
 <div id="web-research-results" class="web-research-results" aria-live="polite"></div>
 <button id="web-research-study" type="button" disabled>Read and study selected pages</button>
 <section id="web-research-study-result" class="web-research-study" hidden><h3 id="web-research-title"></h3><p id="web-research-overview"></p><div id="web-research-citations" class="web-research-citations"></div><div id="web-research-findings"></div><div id="web-research-unknowns"></div><button id="web-research-save" type="button">Save this study to Graves' private research shelf</button></section>
+</div></div>
+
+<div id="p-learning" class="panel" hidden><div class="pin learning-pin">
+<button class="x" aria-label="Close learning journal">✕</button>
+<div class="talk-kicker">THE GRAND LIBRARY · THE CURIOSITY ENGINE</div>
+<h2>Graves' Learning Journal</h2>
+<p class="dim">When you run his private local research worker, Graves can study public web pages, cross-reference sources, save provisional findings and ask follow-up questions. This is stored research, not new model weights or verified truth.</p>
+<div id="learning-status" class="chat-status" role="status" aria-live="polite">Checking for the local learning journal…</div>
+<div id="learning-metrics" class="learning-metrics"></div>
+<div id="learning-notes" class="learning-notes"></div>
+<p class="dim small">Only your connected local bridge can show these private draft notes here. They are not published to the public world or authoritative memories. The research worker is started and stopped from your PC, not by this webpage.</p>
+<p><button type="button" id="learning-refresh">Refresh learning journal</button> <a href="docs/graves-learning-engine-v1.md" target="_blank" rel="noopener">Read the setup guide ↗</a></p>
 </div></div>
 
 <div id="p-trading_lab" class="panel" hidden><div class="pin"><button class="x">✕</button><h2>The Trading Lab</h2>
@@ -134,5 +147,5 @@
 
 <noscript><p style="padding:2rem">Graves' World 3D needs JavaScript. <a href="town.html">Open the 2D town</a>.</p></noscript>
 <script src="config.js"></script><script src="app.js"></script>
-<script type="module" src="world3d.js?v=house-arrival-20261113"></script>
+<script type="module" src="world3d.js?v=learning-engine-20261113"></script>
 </body></html>

@@ -7,6 +7,9 @@
     "test": "node --test",
     "validate:state": "node scripts/state-contract.mjs state.json",
     "workshop": "node workshop/server.mjs",
-    "brain:shadow": "node scripts/run-brain-shadow.mjs"
+    "brain:shadow": "node scripts/run-brain-shadow.mjs",
+    "learning:once": "node scripts/run-learning.mjs once",
+    "learning:watch": "node scripts/run-learning.mjs watch",
+    "learning:status": "node scripts/run-learning.mjs status"
   }
 }
