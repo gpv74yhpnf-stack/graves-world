@@ -65,3 +65,25 @@ body.world3d{margin:0;overflow:hidden;background:#0b0816;touch-action:none;overs
 .proposal-result p{margin:5px 0;color:#e3e2f0}
 .talk-foot{margin-top:12px}
 @media(max-width:600px){.hud-top .btns{flex-wrap:wrap;justify-content:flex-end;max-width:70vw}.talk-pin{max-height:90vh!important;padding:1rem .85rem calc(1rem + env(safe-area-inset-bottom))!important}.chat-messages{height:32vh;min-height:130px}.chat-message{max-width:95%;font-size:13px}.chat-actions,.proposal-row{align-items:stretch}.chat-actions button{min-width:84px}.proposal-row #proposal-button{flex:1;font-size:12px}.talk-intro{font-size:13px}}
+
+
+/* Direction and touch friendly world navigation */
+#compass{position:absolute;top:78px;right:12px;width:58px;height:58px;border:1px solid rgba(142,183,255,.42);border-radius:50%;background:rgba(15,10,30,.72);box-shadow:0 4px 18px rgba(0,0,0,.3);backdrop-filter:blur(7px);pointer-events:none;color:var(--ink);z-index:2}
+#compass-rose{position:absolute;inset:0;transition:transform .08s linear}
+#compass-rose span{position:absolute;font:700 9px/1 system-ui,sans-serif;color:#bdbbd1}
+#compass-rose .north{top:5px;left:50%;transform:translateX(-50%);color:#9de7cb}
+#compass-rose .south{bottom:5px;left:50%;transform:translateX(-50%)}
+#compass-rose .east{right:6px;top:50%;transform:translateY(-50%)}
+#compass-rose .west{left:6px;top:50%;transform:translateY(-50%)}
+.compass-pointer{position:absolute;left:50%;top:11px;width:0;height:0;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:14px solid #f0d59b;filter:drop-shadow(0 0 4px rgba(240,213,155,.7))}
+#compass #heading{position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);font:700 9px/1 system-ui,sans-serif;color:#f0d59b;white-space:nowrap;text-shadow:0 1px 4px #000}
+#travel button{white-space:nowrap;scroll-snap-align:start}
+#hud button:focus-visible,#hud a.b:focus-visible,#travel button:focus-visible{outline:2px solid #9de7cb;outline-offset:2px}
+@media(max-width:600px){
+ .chip{max-width:calc(100vw - 92px)}
+ #compass{top:78px;right:10px;width:52px;height:52px}
+ #travel{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding:0 10px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ #travel::-webkit-scrollbar{display:none}
+ #travel button{flex:0 0 auto}
+ #prompt{max-width:calc(100vw - 32px);white-space:nowrap}
+}
