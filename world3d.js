@@ -2,6 +2,7 @@
    Engine: three.js r160 (MIT) from jsDelivr. Live state: same GitHub issue #1 read by app.js loadState(). */
 import * as THREE from 'three';
 import { createBrowserVoiceController } from './src/voice/browser-voice.mjs';
+import { normalizePrivateBrainUrl } from './src/voice/private-endpoint.mjs';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -547,7 +548,26 @@ $('#home-speak').addEventListener('click', () => {
   voice.speak(gravesLine(), { explicit: true });
 });
 $('#home-talk').addEventListener('click', () => $('#talkb').click());
-const brainBase = () => (localStorage.getItem('graves_brain_url') || 'http://127.0.0.1:8787').replace(/\/$/, '');
+const savedPrivateBrain = () => localStorage.getItem('graves_brain_url');
+const brainBase = () => {
+  const saved = savedPrivateBrain();
+  return saved ? normalizePrivateBrainUrl(saved) : 'http://127.0.0.1:8787';
+};
+const brainUrlInput = $('#brain-url');
+brainUrlInput.value = savedPrivateBrain() || '';
+$('#brain-connect-button').addEventListener('click', () => {
+  try {
+    const origin = normalizePrivateBrainUrl(brainUrlInput.value);
+    localStorage.setItem('graves_brain_url', origin); // URL only, never credentials.
+    brainUrlInput.value = origin;
+    checkBrain();
+  } catch (error) { setChatStatus(error.message, 'error'); }
+});
+$('#brain-disconnect-button').addEventListener('click', () => {
+  localStorage.removeItem('graves_brain_url');
+  brainUrlInput.value = '';
+  checkBrain();
+});
 const chatStatus = $('#chat-status'), chatList = $('#chat-messages'), chatInput = $('#chat-input');
 function setChatStatus(message, kind=''){ chatStatus.textContent=message; chatStatus.className='chat-status'+(kind?' '+kind:''); }
 function addChatMessage(role, content){
@@ -559,7 +579,11 @@ function addChatMessage(role, content){
 }
 function worldContext(){return {place:nearPlace?PLACES[nearPlace].name:null,location:STATE?.location||null,mood:STATE?.mood?.label||null,activity:STATE?.activity||null,thought:short(STATE?.thought||'',260),day:STATE?.day||null};}
 async function checkBrain(){
-  setChatStatus('Looking for the local AI brain…');
+  if (MOBILE && location.hostname.endsWith('github.io') && !savedPrivateBrain()) {
+    setChatStatus('Mobile AI is not connected. You can hear published thoughts at Graves\' House. To talk live, connect your private Tailscale bridge below.', 'error');
+    return;
+  }
+  setChatStatus('Checking the authorized Graves brain…');
   try{const r=await fetch(brainBase()+'/api/health',{cache:'no-store'});if(!r.ok)throw new Error('Local bridge returned '+r.status);const data=await r.json();if(!data.connected)throw new Error(data.message||'Ollama is not responding.');setChatStatus('Connected · '+data.model+' · replies run on this computer','connected');}
   catch(e){setChatStatus('AI unavailable here. On a phone, the public site cannot reach your private PC brain by default. A secure, authenticated mobile backend is needed. You can still hear published thoughts at Graves\' House. ('+short(e.message,80)+')','error');}
 }
