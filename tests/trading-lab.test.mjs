@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { backtest, parseDailyCsv, researchWalkForward, syntheticDemoBars } from "../src/trading/research.mjs";
+import { runResearchCycle } from "../src/trading/research-cycle.mjs";
 import { inspectPaperBuy } from "../src/trading/risk.mjs";
 import { createAlpacaPaperClient, PAPER_TRADING_ORIGIN } from "../src/trading/alpaca-paper.mjs";
 import {
@@ -77,10 +78,10 @@ test("Alpaca connector uses only paper and read-only market data hosts and requi
       calls.push({ url, method: options.method, body: options.body });
       const path = new URL(url).pathname;
       if (path === "/v2/account") return json(account);
+      if (path === "/v2/orders" && options.method === "POST") return json({ id: "paper-id", status: "new" });
       if (path === "/v2/positions" || path === "/v2/orders") return json([]);
       if (path === "/v2/assets/SPY") return json(asset);
       if (path === "/v2/clock") return json({ is_open: true });
-      if (path === "/v2/orders" && options.method === "POST") return json({ id: "paper-id", status: "new" });
       if (path === "/v2/stocks/SPY/bars") return json({ bars: [{
         t: "2024-01-02T05:00:00Z", o: 100, c: 101
       }] });
@@ -122,4 +123,23 @@ test("private ledger persists peak, kill switch, and refuses concurrent order ex
   await withPaperOrderLock(async () => {
     await assert.rejects(withPaperOrderLock(async () => {}, dir), /EEXIST/);
   }, dir);
+});
+
+
+test("research cycle records new completed data once and skips unchanged data", async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "graves-research-cycle-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  let bars = syntheticDemoBars(320);
+  const client = { async getDailyBars() { return bars; } };
+  const now = new Date("2026-11-13T12:00:00Z");
+  const first = await runResearchCycle({ client, symbol: "SPY", now, storeDir: dir });
+  assert.equal(first.ran, true);
+  const second = await runResearchCycle({ client, symbol: "SPY", now, storeDir: dir });
+  assert.equal(second.ran, false);
+  bars = bars.map((bar, i) => i === bars.length - 1
+    ? { ...bar, close: bar.close + 1 } : bar);
+  const third = await runResearchCycle({ client, symbol: "SPY", now, storeDir: dir });
+  assert.equal(third.ran, true);
+  const journal = (await readFile(path.join(dir, "experiments.jsonl"), "utf8")).trim().split("\n");
+  assert.equal(journal.length, 2);
 });
