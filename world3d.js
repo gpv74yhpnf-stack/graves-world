@@ -5,7 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { CHUNK_SIZE, CHUNK_LOAD_RADIUS, CHUNK_UNLOAD_RADIUS, biomeForChunk, chunksAround, createChunkRandom, worldGroundHeight } from './src/worldgen/undercroft.mjs';
+import { CHUNK_SIZE, CHUNK_LOAD_RADIUS, CHUNK_UNLOAD_RADIUS, biomeForChunk, chunksAround, createChunkRandom, landmarkForChunk, worldGroundHeight } from './src/worldgen/undercroft.mjs';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -527,11 +527,76 @@ function collide(v, r = .4){ for (const s of solids){ const dx = v.x - s.x, dz =
 const generatedChunks = new Map();
 let currentChunkKey = '', currentBiomeId = '', enteredUndercroft = false;
 const WORLD_POSITION_KEY = 'g3d_world_position';
+const DISCOVERED_LANDMARKS_KEY = 'g3d_discovered_landmarks';
+const chunkQueue = [], pendingChunkKeys = new Set();
 function chunkKey(x, z){ return x + ',' + z; }
+function addChunkLandmark(root, landmark, x, y, z, accent, key){
+  const model = new THREE.Group();
+  model.position.set(x, y, z);
+  model.rotation.y = landmark.variant * Math.PI / 4;
+  model.scale.setScalar(.94 + (landmark.variant % 4) * .04);
+  root.add(model);
+  add(new THREE.CylinderGeometry(2.05, 2.35, .35, 9), MAT.stoneDark, 0, .18, 0, model);
+  if (landmark.type === 'resonance-spire'){
+    add(new THREE.CylinderGeometry(.52, .85, 4.8, 7), MAT.stone, 0, 2.65, 0, model);
+    add(new THREE.ConeGeometry(.68, 2.2, 7), accent, 0, 5.9, 0, model);
+    const halo = add(new THREE.TorusGeometry(1.35, .075, 6, 18), accent, 0, 4.1, 0, model); halo.rotation.x = Math.PI / 2;
+  } else if (landmark.type === 'shattered-gate'){
+    for (const side of [-1, 1]){
+      add(new THREE.BoxGeometry(.72, 3.4, .75), MAT.stone, side * 2, 1.9, 0, model);
+      add(new THREE.BoxGeometry(.95, .35, .92), MAT.stoneDark, side * 2, 3.75, 0, model);
+    }
+    add(new THREE.BoxGeometry(4.6, .62, .82), MAT.stoneDark, 0, 4.15, 0, model).rotation.z = .08;
+    add(new THREE.OctahedronGeometry(.42, 0), accent, 0, 2.65, 0, model);
+  } else if (landmark.type === 'bone-crown'){
+    for (let i = 0; i < 7; i++){
+      const angle = i * Math.PI * 2 / 7, px = Math.cos(angle) * 1.55, pz = Math.sin(angle) * 1.55;
+      const rib = add(new THREE.CylinderGeometry(.14, .27, 3.2, 6), MAT.bone, px, 1.8, pz, model); rib.rotation.z = -Math.cos(angle) * .32; rib.rotation.x = Math.sin(angle) * .32;
+      add(new THREE.SphereGeometry(.2, 6, 5), MAT.bone, px * 1.15, 3.4, pz * 1.15, model);
+    }
+    add(new THREE.OctahedronGeometry(.65, 0), accent, 0, 2.7, 0, model);
+  } else if (landmark.type === 'drowned-bell'){
+    add(new THREE.CylinderGeometry(.28, .52, 4.6, 8), MAT.bark, 0, 2.55, 0, model);
+    const cap = add(new THREE.SphereGeometry(1.25, 10, 7), accent, 0, 4.75, 0, model); cap.scale.y = .58;
+    add(new THREE.TorusGeometry(1.4, .11, 6, 16), MAT.paper, 0, 4.2, 0, model).rotation.x = Math.PI / 2;
+    add(new THREE.SphereGeometry(.34, 8, 6), MAT.lamp, 0, 3.35, 0, model);
+  } else if (landmark.type === 'archive-relay'){
+    for (let i = 0; i < 4; i++){
+      const angle = i * Math.PI / 2, px = Math.cos(angle) * 1.8, pz = Math.sin(angle) * 1.8;
+      add(new THREE.CylinderGeometry(.25, .4, 3.5, 7), MAT.stone, px, 1.95, pz, model);
+    }
+    const halo = add(new THREE.TorusGeometry(1.25, .09, 6, 20), accent, 0, 3.15, 0, model); halo.rotation.x = Math.PI / 2;
+    add(new THREE.OctahedronGeometry(.58, 0), accent, 0, 3.1, 0, model);
+    add(new THREE.BoxGeometry(4.4, .26, .42), MAT.stoneDark, 0, 3.8, 0, model);
+  } else if (landmark.type === 'blackwater-well'){
+    for (let i = 0; i < 10; i++){
+      const angle = i * Math.PI * 2 / 10, px = Math.cos(angle) * 1.45, pz = Math.sin(angle) * 1.45;
+      add(new THREE.BoxGeometry(.58, .7, .55), MAT.stoneDark, px, .52, pz, model).rotation.y = angle;
+    }
+    add(new THREE.CylinderGeometry(1.12, 1.25, .12, 16), accent, 0, .58, 0, model);
+    const eye = add(new THREE.SphereGeometry(.5, 9, 7), accent, 0, 1.35, 0, model); eye.scale.y = 1.5;
+  } else if (landmark.type === 'mothlight-grove'){
+    for (let i = 0; i < 5; i++){
+      const angle = i * Math.PI * 2 / 5, px = Math.cos(angle) * 1.5, pz = Math.sin(angle) * 1.5, h = 2.5 + (i % 2) * .8;
+      add(new THREE.CylinderGeometry(.13, .22, h, 6), MAT.bark, px, h / 2 + .25, pz, model);
+      const bloom = add(new THREE.SphereGeometry(.45 + (i % 2) * .12, 8, 6), i % 2 ? MAT.pink : accent, px, h + .35, pz, model); bloom.scale.y = .55;
+    }
+    add(new THREE.OctahedronGeometry(.48, 0), MAT.lamp, 0, 2.2, 0, model);
+  } else {
+    for (let i = -1; i <= 1; i++){
+      const marker = add(new THREE.BoxGeometry(.8, 2.7 + (i === 0 ? 1 : 0), .48), MAT.stone, i * 1.25, 1.55 + (i === 0 ? .5 : 0), 0, model);
+      marker.rotation.z = i * .05;
+      add(new THREE.ConeGeometry(.44, .65, 4), MAT.stoneDark, i * 1.25, 3.1 + (i === 0 ? 1 : 0), 0, model).rotation.y = Math.PI / 4;
+      add(new THREE.SphereGeometry(.12, 7, 5), accent, i * 1.25, 2.25, .27, model);
+    }
+  }
+  solids.push({x,z,r:2.4,chunkKey:key});
+}
 function addUndercroftChunk(chunkX, chunkZ){
   const key = chunkKey(chunkX, chunkZ), root = new THREE.Group();
   root.name = 'generated-undercroft-' + key; scene.add(root);
   const biome = biomeForChunk(chunkX, chunkZ), random = createChunkRandom(chunkX, chunkZ);
+  const landmark = landmarkForChunk(chunkX, chunkZ);
   const originX = chunkX * CHUNK_SIZE, originZ = chunkZ * CHUNK_SIZE;
   const ownedMaterials = [];
   const accent = glow(biome.accent, 2.2); ownedMaterials.push(accent);
@@ -551,13 +616,13 @@ function addUndercroftChunk(chunkX, chunkZ){
     const terrainMaterial = M(0xffffff, { vertexColors:true, roughness:1, flatShading:true }); ownedMaterials.push(terrainMaterial);
     const terrain = new THREE.Mesh(geometry, terrainMaterial); terrain.position.set(originX + CHUNK_SIZE / 2, 0, originZ + CHUNK_SIZE / 2); terrain.receiveShadow = true; root.add(terrain);
   }
-  const clusters = 3 + Math.floor(random() * 3);
+  const clusters = 4 + Math.floor(random() * 3);
   for (let n = 0; n < clusters; n++){
     const x = originX + 4 + random() * (CHUNK_SIZE - 8), z = originZ + 4 + random() * (CHUNK_SIZE - 8);
     if (Math.hypot(x, z) < 56) continue;
     const y = groundY(x, z);
     if (biome.form === 'crystal'){
-      for (let shard = 0; shard < 3; shard++){
+      for (let shard = 0; shard < 3 + Math.floor(random() * 2); shard++){
         const height = .8 + random() * 1.5, geo = new THREE.ConeGeometry(.22 + random() * .22, height, 5);
         const mesh = add(geo, accent, x + (random() - .5) * .9, y + height / 2, z + (random() - .5) * .9, root); mesh.rotation.z = (random() - .5) * .5;
       }
@@ -575,6 +640,25 @@ function addUndercroftChunk(chunkX, chunkZ){
       add(new THREE.CylinderGeometry(.12, .2, height, 6), MAT.paper, x, y + height / 2, z, root);
       const cap = add(new THREE.SphereGeometry(.48 + random() * .28, 8, 5), random() > .5 ? MAT.pink : MAT.lilac, x, y + height, z, root); cap.scale.y = .55;
       add(new THREE.SphereGeometry(.07, 6, 4), accent, x + .12, y + height * 1.4, z + .28, root);
+    } else if (biome.form === 'basalt'){
+      for (let rock = 0; rock < 4; rock++){
+        const height = .8 + random() * 2, px = x + (random() - .5) * 1.7, pz = z + (random() - .5) * 1.7;
+        const pillar = add(new THREE.CylinderGeometry(.25 + random() * .2, .45 + random() * .25, height, 5), MAT.stoneDark, px, y + height / 2, pz, root);
+        pillar.rotation.z = (random() - .5) * .24;
+      }
+      add(new THREE.OctahedronGeometry(.22, 0), accent, x, y + 2.2, z, root);
+    } else if (biome.form === 'moth'){
+      const height = 1.4 + random() * 1.3;
+      add(new THREE.CylinderGeometry(.08, .16, height, 5), MAT.bark, x, y + height / 2, z, root);
+      const bloom = add(new THREE.SphereGeometry(.44 + random() * .22, 8, 6), random() > .5 ? MAT.pink : accent, x, y + height, z, root); bloom.scale.y = .5;
+      for (let mote = 0; mote < 3; mote++) add(new THREE.SphereGeometry(.08, 6, 5), accent, x + (random() - .5) * 1.1, y + height + .35 + random() * .55, z + (random() - .5) * 1.1, root);
+    } else if (biome.form === 'ward'){
+      for (let marker = 0; marker < 3; marker++){
+        const px = x + (marker - 1) * .8, height = 1.5 + random() * 1.1;
+        add(new THREE.BoxGeometry(.56, height, .32), MAT.stone, px, y + height / 2, z, root);
+        add(new THREE.ConeGeometry(.36, .5, 4), MAT.stoneDark, px, y + height + .18, z, root).rotation.y = Math.PI / 4;
+        add(new THREE.SphereGeometry(.08, 6, 5), accent, px, y + height * .62, z + .19, root);
+      }
     } else {
       for (let pillar = 0; pillar < 3; pillar++){
         const angle = pillar * Math.PI * 2 / 3, px = x + Math.cos(angle) * 1.5, pz = z + Math.sin(angle) * 1.5;
@@ -585,8 +669,11 @@ function addUndercroftChunk(chunkX, chunkZ){
     }
     solids.push({ x, z, r: biome.form === 'ruins' ? 1.4 : 1, chunkKey:key });
   }
+  if (landmark) addChunkLandmark(root, landmark, (chunkX + .5) * CHUNK_SIZE, groundY((chunkX + .5) * CHUNK_SIZE, (chunkZ + .5) * CHUNK_SIZE), (chunkZ + .5) * CHUNK_SIZE, accent, key);
   root.userData.ownedMaterials = ownedMaterials;
-  generatedChunks.set(key, {x:chunkX, z:chunkZ, root, biome});
+  const chunk = {x:chunkX, z:chunkZ, root, biome, landmark};
+  generatedChunks.set(key, chunk);
+  if (key === currentChunkKey) announceLandmark(chunk);
 }
 function removeUndercroftChunk(key, chunk){
   scene.remove(chunk.root);
@@ -594,6 +681,15 @@ function removeUndercroftChunk(key, chunk){
   chunk.root.userData.ownedMaterials.forEach(material => material.dispose());
   for (let i = solids.length - 1; i >= 0; i--) if (solids[i].chunkKey === key) solids.splice(i, 1);
   generatedChunks.delete(key);
+}
+function announceLandmark(chunk){
+  if (!chunk?.landmark || SHOT) return;
+  let seen = [];
+  try { const saved = JSON.parse(localStorage.getItem(DISCOVERED_LANDMARKS_KEY) || '[]'); if (Array.isArray(saved)) seen = saved.filter(id => typeof id === 'string'); } catch {}
+  if (seen.includes(chunk.landmark.id)) return;
+  seen.push(chunk.landmark.id);
+  try { localStorage.setItem(DISCOVERED_LANDMARKS_KEY, JSON.stringify(seen.slice(-256))); } catch {}
+  toast('Discovered ' + chunk.landmark.name + ' · ' + chunk.biome.name);
 }
 function saveWorldPosition(){
   if (SHOT) return;
@@ -612,18 +708,33 @@ function ensureWorldChunks(){
   const centerX = Math.floor(wisp.position.x / CHUNK_SIZE), centerZ = Math.floor(wisp.position.z / CHUNK_SIZE), centerKey = chunkKey(centerX, centerZ);
   if (centerKey === currentChunkKey) return;
   currentChunkKey = centerKey;
-  for (const point of chunksAround(wisp.position.x, wisp.position.z, CHUNK_LOAD_RADIUS)){
-    const key = chunkKey(point.x, point.z); if (!generatedChunks.has(key)) addUndercroftChunk(point.x, point.z);
-  }
+  const retained = chunkQueue.filter(point => Math.abs(point.x - centerX) <= CHUNK_UNLOAD_RADIUS && Math.abs(point.z - centerZ) <= CHUNK_UNLOAD_RADIUS);
+  chunkQueue.length = 0; pendingChunkKeys.clear();
+  for (const point of retained){ const key = chunkKey(point.x, point.z); if (!generatedChunks.has(key) && !pendingChunkKeys.has(key)){ chunkQueue.push(point); pendingChunkKeys.add(key); } }
+  const wanted = chunksAround(wisp.position.x, wisp.position.z, CHUNK_LOAD_RADIUS);
+  wanted.sort((a,b) => (a.x-centerX)**2 + (a.z-centerZ)**2 - ((b.x-centerX)**2 + (b.z-centerZ)**2));
+  for (const point of wanted){ const key = chunkKey(point.x, point.z); if (!generatedChunks.has(key) && !pendingChunkKeys.has(key)){ chunkQueue.push(point); pendingChunkKeys.add(key); } }
+  chunkQueue.sort((a,b) => (a.x-centerX)**2 + (a.z-centerZ)**2 - ((b.x-centerX)**2 + (b.z-centerZ)**2));
   for (const [key, chunk] of generatedChunks){
     if (Math.abs(chunk.x - centerX) > CHUNK_UNLOAD_RADIUS || Math.abs(chunk.z - centerZ) > CHUNK_UNLOAD_RADIUS) removeUndercroftChunk(key, chunk);
   }
   const biome = biomeForChunk(centerX, centerZ);
+  announceLandmark(generatedChunks.get(centerKey));
   const radius = Math.hypot(wisp.position.x, wisp.position.z);
   if (radius > 58 && !enteredUndercroft){ toast('The lantern road opens into ' + biome.name); enteredUndercroft = true; }
-  else if (radius > 58 && currentBiomeId !== biome.id) toast('Discovered ' + biome.name);
+  else if (radius > 58 && currentBiomeId !== biome.id) toast('Entered ' + biome.name);
   currentBiomeId = biome.id;
   saveWorldPosition();
+}
+function processChunkQueue(){
+  const centerX = Math.floor(wisp.position.x / CHUNK_SIZE), centerZ = Math.floor(wisp.position.z / CHUNK_SIZE);
+  let built = 0;
+  while (chunkQueue.length && built < 2){
+    const point = chunkQueue.shift(), key = chunkKey(point.x, point.z);
+    pendingChunkKeys.delete(key);
+    if (generatedChunks.has(key) || Math.abs(point.x-centerX) > CHUNK_UNLOAD_RADIUS || Math.abs(point.z-centerZ) > CHUNK_UNLOAD_RADIUS) continue;
+    addUndercroftChunk(point.x, point.z); built++;
+  }
 }
 const tmp = new THREE.Vector3(), fwd = new THREE.Vector3();
 function stepWisp(dt){
@@ -686,6 +797,7 @@ function frame(now){
   if (!openPanel){ stepWisp(dt); }
   stepGraves(dt);
   ensureWorldChunks();
+  processChunkQueue();
   sky.position.copy(wisp.position); stars.position.set(wisp.position.x, 0, wisp.position.z);
   moon.position.set(wisp.position.x + Math.cos(moonAngle) * 150, 40 + Math.abs(Math.sin(moonAngle)) * 60, wisp.position.z - 120);
   // camera follows the wisp
