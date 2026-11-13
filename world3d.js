@@ -432,7 +432,7 @@ $('#travel').addEventListener('click', e => { const k = e.target.closest('button
 let pendingOpen = null;
 function goTo(v, openKey){ moveTarget.copy(v); hasTarget = true; marker.visible = true; marker.position.set(v.x, .07, v.z); pendingOpen = openKey || null; audio.chime(); }
 function show(id){ closeAll(); const p = document.getElementById(id); if (!p) return; p.hidden = false; openPanel = id; if (id === 'p-ledger_shop' && !$('#shop').children.length && window.renderShop) window.renderShop(); }
-function closeAll(){ document.querySelectorAll('.panel').forEach(p => p.hidden = true); openPanel = null; }
+function closeAll(){ if (recognition) recognition.stop(); if ('speechSynthesis' in window) window.speechSynthesis.cancel(); document.querySelectorAll('.panel').forEach(p => p.hidden = true); openPanel = null; }
 document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => { if (e.target === p || e.target.classList.contains('x') || e.target.classList.contains('go')) closeAll(); }));
 $('#promptb').addEventListener('click', () => nearPlace && show('p-' + nearPlace));
 $('#helpb').addEventListener('click', () => show('help'));
@@ -466,7 +466,7 @@ $('#snd').addEventListener('click', () => { const on = audio.toggle(); $('#snd')
 
 /* ---------- private in-world conversation with the local Graves brain ---------- */
 const chatMessages = [];
-const brainBase = () => (localStorage.getItem('graves_brain_url') || 'http://127.0.0.1:8787').replace(/\/$/, '');
+const brainBase = () => (localStorage.getItem('graves_brain_url') || (['127.0.0.1','localhost'].includes(location.hostname) && location.port === '8787' ? location.origin : 'http://127.0.0.1:8787')).replace(/\/$/, '');
 const chatStatus = $('#chat-status'), chatList = $('#chat-messages'), chatInput = $('#chat-input');
 function setChatStatus(message, kind=''){ chatStatus.textContent=message; chatStatus.className='chat-status'+(kind?' '+kind:''); }
 function addChatMessage(role, content){
@@ -477,29 +477,164 @@ function addChatMessage(role, content){
   item.append(who,body); chatList.appendChild(item); chatList.scrollTop=chatList.scrollHeight;
 }
 function worldContext(){return {place:nearPlace?PLACES[nearPlace].name:null,location:STATE?.location||null,mood:STATE?.mood?.label||null,activity:STATE?.activity||null,thought:short(STATE?.thought||'',260),day:STATE?.day||null};}
-async function checkBrain(){
-  setChatStatus('Looking for the local AI brain…');
-  try{const r=await fetch(brainBase()+'/api/health',{cache:'no-store'});if(!r.ok)throw new Error('Local bridge returned '+r.status);const data=await r.json();if(!data.connected)throw new Error(data.message||'Ollama is not responding.');setChatStatus('Connected · '+data.model+' · replies run on this computer','connected');}
-  catch(e){setChatStatus('Not connected. Start Ollama and the Graves local bridge on this computer. Setup guide below. ('+short(e.message,110)+')','error');}
+let activeProvider = localStorage.getItem('graves_provider') || 'ollama';
+let chatgptModel = localStorage.getItem('graves_chatgpt_model') || '';
+let chatgptModels = [];
+let speakReplies = false;
+let recognition = null;
+const providerSelect = $('#chat-provider');
+const connectButton = $('#chatgpt-connect');
+const disconnectButton = $('#chatgpt-disconnect');
+const modelRow = $('#chatgpt-model-row');
+const modelSelect = $('#chatgpt-model');
+const voiceButton = $('#chat-voice');
+const speakButton = $('#chat-speak-toggle');
+const localWorkshop = ['127.0.0.1','localhost'].includes(location.hostname) && location.port === '8787';
+const chatgptOption = providerSelect.querySelector('option[value="chatgpt"]');
+if(!localWorkshop){
+  $('#proposal-button').title = 'Build proposals are saved only from the private local workshop';
+  chatgptOption.disabled = true;
+  chatgptOption.textContent = 'ChatGPT account (private workshop only)';
+  activeProvider = 'ollama';
+  localStorage.setItem('graves_provider','ollama');
 }
+providerSelect.value = activeProvider;
+function updateProviderControls(session = null) {
+  const isChatGPT = localWorkshop && activeProvider === 'chatgpt';
+  connectButton.hidden = !isChatGPT || Boolean(session?.connected && session?.sharing);
+  disconnectButton.hidden = !isChatGPT || !Boolean(session?.connected);
+  connectButton.textContent = session?.connected && !session?.sharing ? 'Review ChatGPT plan access' : 'Continue with ChatGPT';
+  connectButton.dataset.reconsent = session?.connected && !session?.sharing ? 'true' : 'false';
+  modelRow.hidden = !isChatGPT || !Boolean(session?.sharing) || !chatgptModels.length;
+}
+async function loadChatGPTModels() {
+  const r = await fetch(brainBase()+'/api/chatgpt/models',{cache:'no-store'});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Could not load ChatGPT models.');
+  chatgptModels = Array.isArray(data.models) ? data.models : [];
+  modelSelect.replaceChildren();
+  for (const model of chatgptModels) {
+    const option = document.createElement('option');
+    option.value = model.slug;
+    option.textContent = model.displayName || model.slug;
+    modelSelect.append(option);
+  }
+  if (!chatgptModels.some(model => model.slug === chatgptModel)) chatgptModel = chatgptModels[0]?.slug || '';
+  if (chatgptModel) modelSelect.value = chatgptModel;
+  localStorage.setItem('graves_chatgpt_model',chatgptModel);
+}
+async function checkBrain(){
+  activeProvider = providerSelect.value;
+  localStorage.setItem('graves_provider',activeProvider);
+  updateProviderControls();
+  if(activeProvider === 'chatgpt'){
+    setChatStatus('Checking your ChatGPT connection…');
+    try{
+      const r=await fetch(brainBase()+'/api/chatgpt/session',{cache:'no-store'});
+      const session=await r.json();
+      if(!r.ok) throw new Error(session.error||'ChatGPT connector is not ready. Run the local SDK installer.');
+      if(session.connected && session.sharing){
+        await loadChatGPTModels();
+        updateProviderControls(session);
+        setChatStatus('Connected · ChatGPT plan usage enabled · credentials stay on this computer','connected');
+      }else if(session.connected){
+        chatgptModels=[];
+        updateProviderControls(session);
+        setChatStatus('Signed in, but plan usage is not enabled. OpenAI currently documents Plus and Pro eligibility for open-source plan usage. Choose Enable ChatGPT plan use to review consent, or switch to Local Ollama.','error');
+      }else{
+        updateProviderControls(session);
+        setChatStatus('ChatGPT is not connected. Choose Continue with ChatGPT to open the secure sign-in flow.','error');
+      }
+    }catch(e){
+      updateProviderControls();
+      setChatStatus(e.message+' If this is the first setup, run local-brain\\install-chatgpt-sdk.ps1.','error');
+    }
+    return;
+  }
+  setChatStatus('Looking for the local AI brain…');
+  try{
+    const r=await fetch(brainBase()+'/api/health',{cache:'no-store'});
+    if(!r.ok)throw new Error('Local bridge returned '+r.status);
+    const data=await r.json();
+    if(!data.connected)throw new Error(data.message||'Ollama is not responding.');
+    setChatStatus('Connected · '+data.model+' · replies run on this computer','connected');
+  }catch(e){
+    setChatStatus('Not connected. Start Ollama and the Graves local bridge on this computer. Setup guide below. ('+short(e.message,110)+')','error');
+  }
+}
+providerSelect.addEventListener('change',checkBrain);
+modelSelect.addEventListener('change',()=>{chatgptModel=modelSelect.value;localStorage.setItem('graves_chatgpt_model',chatgptModel);});
+connectButton.addEventListener('click',async()=>{
+  connectButton.disabled=true;
+  const reconsent=connectButton.dataset.reconsent==='true';
+  setChatStatus(reconsent?'Opening ChatGPT to approve plan usage…':'Opening secure ChatGPT sign-in…');
+  try{
+    const r=await fetch(brainBase()+'/api/chatgpt/sign-in',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reconsent})});
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.error||'ChatGPT sign-in failed.');
+    await checkBrain();
+  }catch(e){setChatStatus(e.message,'error');}
+  finally{connectButton.disabled=false;}
+});
+disconnectButton.addEventListener('click',async()=>{
+  disconnectButton.disabled=true;
+  try{
+    const r=await fetch(brainBase()+'/api/chatgpt/disconnect',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.error||'Could not disconnect ChatGPT.');
+    chatgptModels=[];chatgptModel='';modelSelect.replaceChildren();updateProviderControls(data);
+    setChatStatus('ChatGPT disconnected. Local credentials were removed from the selected profile.','connected');
+  }catch(e){setChatStatus(e.message,'error');}
+  finally{disconnectButton.disabled=false;}
+});
 $('#talkb').addEventListener('click',()=>{show('p-conversation');checkBrain();setTimeout(()=>chatInput.focus(),120);});
 $('#chat-form').addEventListener('submit',async e=>{
   e.preventDefault();const message=chatInput.value.trim();if(!message)return;
   const send=$('#chat-send');chatInput.value='';chatMessages.push({role:'user',content:message});addChatMessage('user',message);send.disabled=true;setChatStatus('Graves is gathering his thoughts…');
-  try{const r=await fetch(brainBase()+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'The local mind could not answer.');const reply=String(data.reply||'The lantern flickers, but no words came through.').slice(0,5000);chatMessages.push({role:'assistant',content:reply});addChatMessage('assistant',reply);setChatStatus('Connected · '+(data.model||'local model'),'connected');$('#proposal-button').disabled=false;}
-  catch(err){chatMessages.pop();chatInput.value=message;setChatStatus(err.message+' Check the local bridge and try again.','error');}
+  try{
+    const endpoint=activeProvider==='chatgpt'?'/api/chatgpt/chat':'/api/chat';
+    const payload={messages:chatMessages.slice(-12),world:worldContext()};
+    if(activeProvider==='chatgpt')payload.model=chatgptModel;
+    const r=await fetch(brainBase()+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await r.json();if(!r.ok)throw new Error(data.error||'The selected mind could not answer.');
+    const reply=String(data.reply||'The lantern flickers, but no words came through.').slice(0,5000);
+    chatMessages.push({role:'assistant',content:reply});addChatMessage('assistant',reply);
+    setChatStatus('Connected · '+(data.model||'local model')+' · '+(data.provider==='chatgpt'?'ChatGPT plan':'local model'),'connected');
+    $('#proposal-button').disabled=!localWorkshop;
+    if(speakReplies && 'speechSynthesis' in window){window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(reply);utterance.lang=navigator.language||'en-US';window.speechSynthesis.speak(utterance);}
+  }catch(err){chatMessages.pop();chatInput.value=message;setChatStatus(err.message+' Check the selected provider and try again.','error');}
   finally{send.disabled=false;chatInput.focus();}
 });
 chatInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#chat-form').requestSubmit();}});
-$('#chat-clear').addEventListener('click',()=>{chatMessages.length=0;chatList.innerHTML='<div class="chat-empty">The lantern is waiting. Start us off.</div>';$('#proposal-button').disabled=true;$('#proposal-result').hidden=true;setChatStatus('Conversation cleared. This session was not saved.');});
+$('#chat-clear').addEventListener('click',()=>{
+  chatMessages.length=0;chatList.innerHTML='<div class="chat-empty">The lantern is waiting. Start us off.</div>';
+  $('#proposal-button').disabled=true;$('#proposal-result').hidden=true;
+  if('speechSynthesis' in window)window.speechSynthesis.cancel();
+  setChatStatus('Conversation cleared. This session was not saved.');
+});
 $('#proposal-button').addEventListener('click',async()=>{
-  if(!chatMessages.length)return;const button=$('#proposal-button');button.disabled=true;button.textContent='Drafting proposal…';
+  if(!chatMessages.length||!localWorkshop)return;const button=$('#proposal-button');button.disabled=true;button.textContent='Drafting proposal…';
   try{const r=await fetch(brainBase()+'/api/propose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Could not create a proposal.');const p=data.proposal,box=$('#proposal-result');box.hidden=false;box.replaceChildren();const title=document.createElement('h3');title.textContent='Proposal saved to your private vault';const name=document.createElement('p');name.textContent=p.title+' · '+p.kind;const summary=document.createElement('p');summary.textContent=p.summary;const details=document.createElement('p');details.textContent=(p.design_notes||[]).join(' • ');const status=document.createElement('p');status.textContent='Review required · Not applied to the world';box.append(title,name,summary,details,status);setChatStatus('Proposal saved locally for review. Nothing has been published.','connected');}
   catch(err){setChatStatus(err.message,'error');}
   finally{button.disabled=false;button.textContent='✧ Turn this conversation into a build proposal';}
 });
-
-
+voiceButton.addEventListener('click',()=>{
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){setChatStatus('Speech recognition is not available in this browser. Typed chat still works.','error');return;}
+  if(recognition){recognition.stop();return;}
+  recognition=new SpeechRecognition();recognition.lang=navigator.language||'en-US';recognition.interimResults=false;recognition.maxAlternatives=1;
+  recognition.onstart=()=>{voiceButton.classList.add('listening');voiceButton.textContent='Listening… tap to stop';setChatStatus('Listening. Speak your message, then Graves will respond.');};
+  recognition.onresult=event=>{const transcript=event.results?.[0]?.[0]?.transcript||'';if(transcript.trim()){chatInput.value=transcript.trim();$('#chat-form').requestSubmit();}};
+  recognition.onerror=event=>setChatStatus('Microphone transcription error: '+event.error+'. You can still type.','error');
+  recognition.onend=()=>{recognition=null;voiceButton.classList.remove('listening');voiceButton.textContent='🎙 Speak to Graves';};
+  try{recognition.start();}catch(e){recognition=null;setChatStatus('Could not start microphone: '+e.message,'error');}
+});
+speakButton.addEventListener('click',()=>{
+  if(!('speechSynthesis' in window)){setChatStatus('Speech playback is not available in this browser.','error');return;}
+  speakReplies=!speakReplies;speakButton.setAttribute('aria-pressed',String(speakReplies));
+  speakButton.textContent=speakReplies?'🔊 Speak replies: on':'🔇 Speak replies: off';
+  if(!speakReplies)window.speechSynthesis.cancel();
+});
 /* ---------- input: tap/click to move, drag to orbit, pinch/scroll zoom, WASD ---------- */
 const cam = { yaw: 0.0, pitch: MOBILE ? .55 : 0.42, dist: MOBILE ? 15 : 12, look: new THREE.Vector3() };
 const keys = {}; addEventListener('keydown', e => { if (!/INPUT|TEXTAREA/.test(document.activeElement.tagName)) keys[e.key.toLowerCase()] = true; }); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
