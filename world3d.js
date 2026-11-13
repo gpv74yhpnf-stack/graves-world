@@ -581,6 +581,11 @@ $('#proposal-button').addEventListener('click',async()=>{
 });
 
 
+// Direct arrival from the 2D fallback, without changing private mind state.
+if (new URLSearchParams(location.search).get('place') === 'graves_house') {
+  goTo(PLACES.graves_house.ring.clone(), 'graves_house');
+}
+
 /* ---------- input: tap/click to move, drag to orbit, pinch/scroll zoom, WASD ---------- */
 const cam = { yaw: 0.0, pitch: MOBILE ? .55 : 0.42, dist: MOBILE ? 15 : 12, look: new THREE.Vector3() };
 const keys = {}; addEventListener('keydown', e => { if (!/INPUT|TEXTAREA/.test(document.activeElement.tagName)) keys[e.key.toLowerCase()] = true; }); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
