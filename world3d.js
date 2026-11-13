@@ -5,12 +5,15 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { CHUNK_SIZE, CHUNK_LOAD_RADIUS, CHUNK_UNLOAD_RADIUS, biomeForChunk, chunksAround, createChunkRandom, worldGroundHeight } from './src/worldgen/undercroft.mjs';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const MOBILE = matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const SHOT = new URLSearchParams(location.search).get('shot'); // used for headless screenshots
 let QUALITY = +(localStorage.getItem('g3d_q') ?? (MOBILE ? 1 : 2)); // 0 low, 1 medium, 2 high
+let renderScale = 1; const PIXEL_RATIO_CAP = [1, 1.5, 2];
+const HEADING_NAMES = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest'];
 const lerp = THREE.MathUtils.lerp, clamp = THREE.MathUtils.clamp;
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
@@ -26,17 +29,17 @@ const PLACES = {
 const KEYS = Object.keys(PLACES);
 const solids = []; // {x,z,r} simple circle colliders
 const ground = h => 0;
-function groundY(x, z){ const r = Math.hypot(x, z); return r < 34 ? 0 : Math.pow((r - 34) / 10, 2) * 3 * (0.7 + 0.3 * Math.sin(x * .3) * Math.cos(z * .25)); }
+const groundY = worldGroundHeight;
 
 /* ---------- renderer / scene ---------- */
 const canvas = $('#gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: !MOBILE, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, [1, 1.5, 2][QUALITY]));
+renderer.setPixelRatio(Math.min(devicePixelRatio, PIXEL_RATIO_CAP[QUALITY] * renderScale));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = QUALITY >= 2; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x1a1330, 0.022);
+scene.fog = new THREE.FogExp2(0x1a1330, 0.014);
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 400);
 
 const composer = new EffectComposer(renderer);
@@ -44,11 +47,11 @@ composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.65, 0.5, 0.78);
 composer.addPass(bloom); composer.addPass(new OutputPass());
 function applyQuality(){
-  renderer.setPixelRatio(Math.min(devicePixelRatio, [1, 1.5, 2][QUALITY]));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, PIXEL_RATIO_CAP[QUALITY] * renderScale));
   bloom.enabled = QUALITY > 0; renderer.shadowMap.enabled = QUALITY >= 2;
-  scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
   resize();
 }
+function setRenderScale(next){ renderScale = clamp(next, .65, 1); applyQuality(); }
 function resize(){ camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); bloom.resolution.set(innerWidth / 2, innerHeight / 2); }
 addEventListener('resize', resize);
 
@@ -96,7 +99,7 @@ scene.add(moonLight);
 
 /* ---------- ground ---------- */
 {
-  const g = new THREE.PlaneGeometry(220, 220, 110, 110); g.rotateX(-Math.PI / 2);
+  const g = new THREE.PlaneGeometry(96, 96, 48, 48); g.rotateX(-Math.PI / 2);
   const pos = g.attributes.position, col = []; const c = new THREE.Color();
   for (let i = 0; i < pos.count; i++){
     const x = pos.getX(i), z = pos.getZ(i); pos.setY(i, groundY(x, z) + (Math.hypot(x, z) > 30 ? (rnd() - .5) * .4 : (rnd() - .5) * .06));
@@ -375,13 +378,13 @@ function palette(h){
   const t = (h - a[0]) / Math.max(.001, b[0] - a[0]), A = PAL[a[1]], B = PAL[b[1]], c = (i) => new THREE.Color(A[i]).lerp(new THREE.Color(B[i]), t);
   return { top: c(0), bottom: c(1), fog: c(2), hemi: lerp(A[3], B[3], t), light: lerp(A[4], B[4], t), lamps: lerp(A[5], B[5], t), stars: lerp(A[6], B[6], t), name: t < .5 ? a[1] : b[1] };
 }
-let PALNOW = palette(SHOT && SHOT !== '1' && !isNaN(+SHOT) ? +SHOT : chicagoNow());
+let PALNOW = palette(SHOT && SHOT !== '1' && !isNaN(+SHOT) ? +SHOT : chicagoNow()), moonAngle = 0;
 function applyPalette(){
   const h = (SHOT && !isNaN(+SHOT) && SHOT !== '1') ? +SHOT : chicagoNow(); PALNOW = palette(h);
   skyUniforms.top.value.copy(PALNOW.top); skyUniforms.bottom.value.copy(PALNOW.bottom); scene.fog.color.copy(PALNOW.fog);
   hemi.intensity = PALNOW.hemi; moonLight.intensity = PALNOW.light; stars.material.opacity = PALNOW.stars;
   const sunUp = h > 6.5 && h < 18.5; moon.material.color.set(sunUp ? 0xffd9a0 : 0xfff3c9); moonLight.color.set(sunUp ? 0xffd2b0 : 0xb9c4ff);
-  const a = ((h - 6) / 24) * Math.PI * 2; moon.position.set(Math.cos(a) * 150, 40 + Math.abs(Math.sin(a)) * 60, -120);
+  moonAngle = ((h - 6) / 24) * Math.PI * 2; moon.position.set(wisp.position.x + Math.cos(moonAngle) * 150, 40 + Math.abs(Math.sin(moonAngle)) * 60, wisp.position.z - 120);
   const hh = Math.floor(h), mm = Math.round((h - hh) * 60); $('#clock').textContent = `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'AM' : 'PM'} Central · ${PALNOW.name}`;
 }
 applyPalette(); setInterval(applyPalette, 60000);
@@ -436,7 +439,7 @@ function closeAll(){ document.querySelectorAll('.panel').forEach(p => p.hidden =
 document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => { if (e.target === p || e.target.classList.contains('x') || e.target.classList.contains('go')) closeAll(); }));
 $('#promptb').addEventListener('click', () => nearPlace && show('p-' + nearPlace));
 $('#helpb').addEventListener('click', () => show('help'));
-$('#qual').addEventListener('click', () => { QUALITY = (QUALITY + 1) % 3; localStorage.setItem('g3d_q', QUALITY); applyQuality(); toast(['Graphics: low (fast)', 'Graphics: medium', 'Graphics: high'][QUALITY]); });
+$('#qual').addEventListener('click', () => { QUALITY = (QUALITY + 1) % 3; renderScale = 1; localStorage.setItem('g3d_q', QUALITY); applyQuality(); toast(['Graphics: low (fast)', 'Graphics: medium', 'Graphics: high'][QUALITY]); });
 addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); if ((e.key === 'e' || e.key === 'Enter') && nearPlace && !openPanel && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) show('p-' + nearPlace); });
 let toastT; function toast(t){ const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2200); }
 const labelEls = {}; for (const k of KEYS){ const d = document.createElement('div'); d.className = 'plabel'; d.textContent = PLACES[k].name; $('#labels').appendChild(d); labelEls[k] = d; }
@@ -514,13 +517,114 @@ const endPtr = e => { const wasTap = drag && drag.moved <= 8 && pointers.size ==
   if (wasTap){ ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
     // tapped Graves?
     if (ray.intersectObject(G.root, true).length){ goTo(G.root.position.clone().add(new THREE.Vector3(0, 0, 2.2))); toast('Drifting over to Graves'); }
-    else { const hit = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, hit)){ let k = null; for (const q of KEYS) if (hit.distanceTo(PLACES[q].pos) < 4.5) k = q; goTo(hit.clampLength(0, 40), null); if (k) pendingOpen = null; } } }
+    else { const hit = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, hit)){ let k = null; for (const q of KEYS) if (hit.distanceTo(PLACES[q].pos) < 4.5) k = q; goTo(hit.clone().sub(wisp.position).clampLength(0, 120).add(wisp.position), null); if (k) pendingOpen = null; } } }
   drag = null; };
 canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
 canvas.addEventListener('wheel', e => { cam.dist = clamp(cam.dist * (1 + Math.sign(e.deltaY) * .08), 6, 24); e.preventDefault(); }, { passive: false });
 
 /* ---------- simulation ---------- */
-function collide(v, r = .4){ for (const s of solids){ const dx = v.x - s.x, dz = v.z - s.z, d = Math.hypot(dx, dz), m = s.r + r; if (d < m && d > 1e-4){ v.x = s.x + dx / d * m; v.z = s.z + dz / d * m; } } const R = Math.hypot(v.x, v.z); if (R > 42){ v.x *= 42 / R; v.z *= 42 / R; } }
+function collide(v, r = .4){ for (const s of solids){ const dx = v.x - s.x, dz = v.z - s.z, d = Math.hypot(dx, dz), m = s.r + r; if (d < m && d > 1e-4){ v.x = s.x + dx / d * m; v.z = s.z + dz / d * m; } } }
+const generatedChunks = new Map();
+let currentChunkKey = '', currentBiomeId = '', enteredUndercroft = false;
+const WORLD_POSITION_KEY = 'g3d_world_position';
+function chunkKey(x, z){ return x + ',' + z; }
+function addUndercroftChunk(chunkX, chunkZ){
+  const key = chunkKey(chunkX, chunkZ), root = new THREE.Group();
+  root.name = 'generated-undercroft-' + key; scene.add(root);
+  const biome = biomeForChunk(chunkX, chunkZ), random = createChunkRandom(chunkX, chunkZ);
+  const originX = chunkX * CHUNK_SIZE, originZ = chunkZ * CHUNK_SIZE;
+  const ownedMaterials = [];
+  const accent = glow(biome.accent, 2.2); ownedMaterials.push(accent);
+  // Keep the authored town floor seamless; generated terrain begins outside its four center tiles.
+  const isTownFloor = chunkX >= -1 && chunkX <= 0 && chunkZ >= -1 && chunkZ <= 0;
+  if (!isTownFloor){
+    const geometry = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE, 12, 12);
+    geometry.rotateX(-Math.PI / 2);
+    const positions = geometry.attributes.position, colors = [], base = new THREE.Color(biome.tint);
+    for (let i = 0; i < positions.count; i++){
+      const worldX = originX + CHUNK_SIZE / 2 + positions.getX(i), worldZ = originZ + CHUNK_SIZE / 2 + positions.getZ(i);
+      positions.setY(i, groundY(worldX, worldZ));
+      const shade = base.clone(); shade.offsetHSL((random() - .5) * .025, 0, (random() - .5) * .07);
+      colors.push(shade.r, shade.g, shade.b);
+    }
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); geometry.computeVertexNormals();
+    const terrainMaterial = M(0xffffff, { vertexColors:true, roughness:1, flatShading:true }); ownedMaterials.push(terrainMaterial);
+    const terrain = new THREE.Mesh(geometry, terrainMaterial); terrain.position.set(originX + CHUNK_SIZE / 2, 0, originZ + CHUNK_SIZE / 2); terrain.receiveShadow = true; root.add(terrain);
+  }
+  const clusters = 3 + Math.floor(random() * 3);
+  for (let n = 0; n < clusters; n++){
+    const x = originX + 4 + random() * (CHUNK_SIZE - 8), z = originZ + 4 + random() * (CHUNK_SIZE - 8);
+    if (Math.hypot(x, z) < 56) continue;
+    const y = groundY(x, z);
+    if (biome.form === 'crystal'){
+      for (let shard = 0; shard < 3; shard++){
+        const height = .8 + random() * 1.5, geo = new THREE.ConeGeometry(.22 + random() * .22, height, 5);
+        const mesh = add(geo, accent, x + (random() - .5) * .9, y + height / 2, z + (random() - .5) * .9, root); mesh.rotation.z = (random() - .5) * .5;
+      }
+    } else if (biome.form === 'stone'){
+      for (let rock = 0; rock < 3; rock++){
+        const size = .45 + random() * .8, mesh = add(new THREE.IcosahedronGeometry(size, 0), rock % 2 ? MAT.stone : MAT.stoneDark, x + (random() - .5) * 1.4, y + size * .55, z + (random() - .5) * 1.4, root);
+        mesh.rotation.set(random(), random() * 3, random()); mesh.scale.y = .65 + random() * .45;
+      }
+    } else if (biome.form === 'bone'){
+      add(new THREE.CylinderGeometry(.16, .32, 3.2, 6), MAT.bone, x, y + 1.6, z, root).rotation.z = (random() - .5) * .18;
+      const branch = add(new THREE.BoxGeometry(1.8, .13, .13), MAT.bone, x, y + 2.55, z, root); branch.rotation.y = random() * Math.PI;
+      add(new THREE.SphereGeometry(.24, 6, 5), MAT.bone, x - .5, y + 3, z, root); add(new THREE.SphereGeometry(.24, 6, 5), MAT.bone, x + .5, y + 3, z, root);
+    } else if (biome.form === 'fungus'){
+      const height = .7 + random() * .55;
+      add(new THREE.CylinderGeometry(.12, .2, height, 6), MAT.paper, x, y + height / 2, z, root);
+      const cap = add(new THREE.SphereGeometry(.48 + random() * .28, 8, 5), random() > .5 ? MAT.pink : MAT.lilac, x, y + height, z, root); cap.scale.y = .55;
+      add(new THREE.SphereGeometry(.07, 6, 4), accent, x + .12, y + height * 1.4, z + .28, root);
+    } else {
+      for (let pillar = 0; pillar < 3; pillar++){
+        const angle = pillar * Math.PI * 2 / 3, px = x + Math.cos(angle) * 1.5, pz = z + Math.sin(angle) * 1.5;
+        add(new THREE.CylinderGeometry(.22, .32, 3.1, 7), MAT.stone, px, y + 1.55, pz, root);
+      }
+      add(new THREE.BoxGeometry(3.8, .28, .45), MAT.stoneDark, x, y + 3.05, z, root);
+      add(new THREE.OctahedronGeometry(.35, 0), accent, x, y + 3.65, z, root);
+    }
+    solids.push({ x, z, r: biome.form === 'ruins' ? 1.4 : 1, chunkKey:key });
+  }
+  root.userData.ownedMaterials = ownedMaterials;
+  generatedChunks.set(key, {x:chunkX, z:chunkZ, root, biome});
+}
+function removeUndercroftChunk(key, chunk){
+  scene.remove(chunk.root);
+  chunk.root.traverse(object => { if (object.geometry) object.geometry.dispose(); });
+  chunk.root.userData.ownedMaterials.forEach(material => material.dispose());
+  for (let i = solids.length - 1; i >= 0; i--) if (solids[i].chunkKey === key) solids.splice(i, 1);
+  generatedChunks.delete(key);
+}
+function saveWorldPosition(){
+  if (SHOT) return;
+  try { localStorage.setItem(WORLD_POSITION_KEY, JSON.stringify({x:wisp.position.x, z:wisp.position.z})); } catch {}
+}
+function loadWorldPosition(){
+  if (SHOT) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(WORLD_POSITION_KEY) || 'null');
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.z) && Math.abs(saved.x) < 1000000 && Math.abs(saved.z) < 1000000) return saved;
+  } catch {}
+  return null;
+}
+addEventListener('pagehide', saveWorldPosition);
+function ensureWorldChunks(){
+  const centerX = Math.floor(wisp.position.x / CHUNK_SIZE), centerZ = Math.floor(wisp.position.z / CHUNK_SIZE), centerKey = chunkKey(centerX, centerZ);
+  if (centerKey === currentChunkKey) return;
+  currentChunkKey = centerKey;
+  for (const point of chunksAround(wisp.position.x, wisp.position.z, CHUNK_LOAD_RADIUS)){
+    const key = chunkKey(point.x, point.z); if (!generatedChunks.has(key)) addUndercroftChunk(point.x, point.z);
+  }
+  for (const [key, chunk] of generatedChunks){
+    if (Math.abs(chunk.x - centerX) > CHUNK_UNLOAD_RADIUS || Math.abs(chunk.z - centerZ) > CHUNK_UNLOAD_RADIUS) removeUndercroftChunk(key, chunk);
+  }
+  const biome = biomeForChunk(centerX, centerZ);
+  const radius = Math.hypot(wisp.position.x, wisp.position.z);
+  if (radius > 58 && !enteredUndercroft){ toast('The lantern road opens into ' + biome.name); enteredUndercroft = true; }
+  else if (radius > 58 && currentBiomeId !== biome.id) toast('Discovered ' + biome.name);
+  currentBiomeId = biome.id;
+  saveWorldPosition();
+}
 const tmp = new THREE.Vector3(), fwd = new THREE.Vector3();
 function stepWisp(dt){
   let ix = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0), iz = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
@@ -567,15 +671,27 @@ const proj = new THREE.Vector3();
 function toScreen(v, el, yOff = 0, maxD = 40){ proj.copy(v); proj.y += yOff; const dist = camera.position.distanceTo(proj); proj.project(camera);
   const vis = proj.z < 1 && Math.abs(proj.x) < 1.1 && Math.abs(proj.y) < 1.1 && dist < maxD; el.hidden = !vis; if (vis){ el.style.left = ((proj.x + 1) / 2 * innerWidth) + 'px'; el.style.top = ((1 - proj.y) / 2 * innerHeight) + 'px'; } return vis; }
 
-let T = 0, last = performance.now(), frames = 0, slowFrames = 0;
+let T = 0, last = performance.now(), frames = 0, slowFrames = 0, rafId = 0;
+function updateCompass(){
+  const bearing = ((-cam.yaw * 180 / Math.PI) % 360 + 360) % 360;
+  const index = Math.round(bearing / 45) % 8;
+  const rose = $('#compass-rose'); if (rose) rose.style.transform = 'rotate(' + cam.yaw + 'rad)';
+  const heading = $('#compass'), label = $('#heading');
+  const shortName = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][index], degrees = Math.round(bearing);
+  if (heading && heading._lastHeading !== shortName + ' ' + degrees + '°'){ heading._lastHeading = shortName + ' ' + degrees + '°'; heading.setAttribute('aria-label', 'Compass. Facing ' + HEADING_NAMES[index] + ', ' + degrees + ' degrees.'); if (label) label.textContent = heading._lastHeading; }
+}
 function frame(now){
+  rafId = 0;
   const dt = Math.min(.05, (now - last) / 1000); last = now; T += dt;
   if (!openPanel){ stepWisp(dt); }
   stepGraves(dt);
+  ensureWorldChunks();
+  sky.position.copy(wisp.position); stars.position.set(wisp.position.x, 0, wisp.position.z);
+  moon.position.set(wisp.position.x + Math.cos(moonAngle) * 150, 40 + Math.abs(Math.sin(moonAngle)) * 60, wisp.position.z - 120);
   // camera follows the wisp
   cam.look.lerp(tmp.copy(wisp.position).setY(wisp.position.y + .3), Math.min(1, dt * 5));
   const cx = cam.look.x + Math.sin(cam.yaw) * Math.cos(cam.pitch) * cam.dist, cz = cam.look.z + Math.cos(cam.yaw) * Math.cos(cam.pitch) * cam.dist;
-  camera.position.lerp(tmp.set(cx, Math.max(cam.look.y + Math.sin(cam.pitch) * cam.dist, groundY(cx, cz) + 1.2), cz), Math.min(1, dt * 6)); camera.lookAt(cam.look);
+  camera.position.lerp(tmp.set(cx, Math.max(cam.look.y + Math.sin(cam.pitch) * cam.dist, groundY(cx, cz) + 1.2), cz), Math.min(1, dt * 6)); camera.lookAt(cam.look); updateCompass();
   // lights flicker; lamps brighter at night
   for (const f of flickers){ f.light.intensity = f.base * PALNOW.lamps * (0.85 + Math.sin(T * 9 + f.ph) * .07 + Math.sin(T * 23 + f.ph * 2) * .05); }
   MAT.lamp.emissiveIntensity = 1.4 + PALNOW.lamps * 1.2;
@@ -594,9 +710,14 @@ function frame(now){
   toScreen(wisp.position, $('#tag-you'), .7, 30);
   for (const k of KEYS){ toScreen(PLACES[k].pos, labelEls[k], k === 'offering_stone' ? 3 : k === 'bone_garden' ? 2.2 : 9, 60); }
   composer.render(dt);
-  // auto-lower quality if it's struggling
-  frames++; if (dt > .045) slowFrames++; if (frames === 180){ if (slowFrames > 90 && QUALITY > 0 && !localStorage.getItem('g3d_q')){ QUALITY--; applyQuality(); toast('Lowered graphics to keep it smooth'); } frames = 0; slowFrames = 0; }
-  requestAnimationFrame(frame);
+  // Adapt render resolution while preserving the selected graphics level.
+  frames++; if (dt > .028) slowFrames++;
+  if (frames === 240){
+    if (slowFrames > 144 && renderScale > .65) setRenderScale(renderScale - .12);
+    else if (slowFrames < 48 && renderScale < 1) setRenderScale(Math.min(1, renderScale + .06));
+    frames = 0; slowFrames = 0;
+  }
+  if (!document.hidden) rafId = requestAnimationFrame(frame);
 }
 
 /* ---------- boot ---------- */
@@ -605,10 +726,15 @@ function frame(now){
     await refresh();
     // start Graves near the crypt door; he'll walk to wherever his mind says he is
     if (SHOT){ G.root.position.copy(PLACES[graves.home].stand); wisp.position.copy(PLACES[graves.home].stand).add(new THREE.Vector3(-.6, 1.1, 3.6)); cam.look.copy(wisp.position); cam.yaw = -.5; cam.dist = MOBILE ? 11 : 9; if (/over/.test(location.search)){ wisp.position.set(0, 1.1, 14); cam.look.copy(wisp.position); cam.dist = 34; cam.pitch = .62; cam.yaw = 0; } }
-    else { wisp.position.copy(PLACES[graves.home].ring).add(new THREE.Vector3(0, 1.1, 5)); cam.look.copy(wisp.position); }
+    else { const saved = loadWorldPosition(); if (saved) wisp.position.set(saved.x, groundY(saved.x, saved.z) + 1.1, saved.z); else wisp.position.copy(PLACES[graves.home].ring).add(new THREE.Vector3(0, 1.1, 5)); cam.look.copy(wisp.position); }
     setInterval(refresh, 300000);
     window.__g3dReady = true; clearTimeout(window.__g3dFallback);
-    requestAnimationFrame(t => { last = t; frame(t); });
+    applyQuality();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden){ cancelAnimationFrame(rafId); rafId = 0; }
+      else { last = performance.now(); if (!rafId) rafId = requestAnimationFrame(frame); }
+    });
+    rafId = requestAnimationFrame(frame);
     setTimeout(() => { $('#loading').style.opacity = 0; setTimeout(() => $('#loading').remove(), 900); }, 300);
     if (!localStorage.getItem('g3d_seen') && !SHOT){ show('help'); localStorage.setItem('g3d_seen', 1); }
   } catch (e){ console.error(e); location.replace('town.html?err3d=1'); }

@@ -16,10 +16,11 @@
 <div id="hud">
  <div class="hud-top">
   <div class="title"><b>Graves' World</b><span id="clock" class="dim small"></span></div>
-  <div class="btns"><button id="snd" title="Ambient sound">🔇</button><button id="talkb" title="Talk and build with Graves">✦ Talk</button><button id="qual" title="Graphics quality">✨</button><button id="helpb" title="How to play">?</button><a class="b" href="town.html" title="2D town and pages">2D</a><a class="b" href="library.html" title="The Grand Library">Library</a></div>
+  <div class="btns"><button id="snd" aria-label="Toggle ambient sound" title="Ambient sound">🔇</button><button id="talkb" aria-label="Talk and build with Graves" title="Talk and build with Graves">✦ Talk</button><button id="qual" aria-label="Change graphics quality" title="Graphics quality">✨</button><button id="helpb" aria-label="How to play" title="How to play">?</button><a class="b" href="town.html" aria-label="Open the 2D town" title="2D town and pages">2D</a><a class="b" href="library.html" title="The Grand Library">Library</a></div>
  </div>
  <div id="mood" class="chip"></div>
- <div id="travel"></div>
+ <div id="compass" role="img" aria-label="Compass, facing north"><div id="compass-rose"><span class="north">N</span><span class="east">E</span><span class="south">S</span><span class="west">W</span></div><i class="compass-pointer" aria-hidden="true"></i><span id="heading">N 0°</span></div>
+  <nav id="travel" aria-label="Travel to places"></nav>
  <div id="prompt" hidden><button id="promptb"></button></div>
  <div id="toast" hidden></div>
 </div>
@@ -29,7 +30,8 @@
 
 <div id="help" class="panel" hidden><div class="pin"><button class="x">✕</button><h2>Welcome, little wisp</h2>
 <p>You're a lantern wisp drifting through the town where <b>Graves</b>, a small necromancer, lives. His mood, thoughts and where he goes come from his real mind. It updates a few times a day.</p>
-<ul><li><b>Move:</b> tap or click the ground, or use WASD / arrow keys. Drag to turn the camera, pinch or scroll to zoom.</li>
+<ul><li><b>Move:</b> tap or click the ground, or use WASD / arrow keys. The compass tracks your view. Drag to turn the camera, pinch or scroll to zoom.</li>
+<li><b>Explore:</b> roam past the lanterns to discover seeded caverns, bone orchards, glowing fens and ruined archives. New ground streams in as you travel, and the world remembers your last position.</li>
 <li><b>Places:</b> walk into a glowing ring, or use the place buttons. <b>Offering Stone</b> lets you leave him a note. <b>Ledger Shop</b> has the shop, <b>the Crypt</b> holds his journal and memories, <b>Lantern Lane</b> shows how he's doing, <b>the Bone Garden</b> has letters he answered, and <b>the Grand Library</b> is his new moonstone archive of art, stories, poetry and culture.</li>
 <li><b>Graves:</b> walk up to him to hear what he's thinking. If you left a note with your name, he'll greet you.</li></ul>
 <p class="dim small">Everything here is made from code (no downloaded models). <a href="CREDITS.md" target="_blank">Credits</a> · <a href="how.html">How he works</a> · <a href="town.html">2D town</a></p>
