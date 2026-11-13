@@ -114,3 +114,26 @@ body.world3d{margin:0;overflow:hidden;background:#0b0816;touch-action:none;overs
  .atlas-landmark .dim,.atlas-landmark button{grid-column:1;grid-row:auto}
  .atlas-landmark button{justify-self:start}
 }
+
+
+/* Mobile voice controls and the Lantern Hearth */
+.voice-actions,.home-actions{display:flex;flex-wrap:wrap;gap:8px;margin:9px 0}
+.voice-actions button,.home-actions button{border-radius:9px;border:1px solid rgba(142,183,255,.48);background:rgba(36,56,95,.85);color:#eef4ff;padding:9px 13px;min-height:44px;cursor:pointer;font:600 13px system-ui,sans-serif}
+.voice-actions button[aria-pressed="true"]{color:#a8ffdf;background:rgba(23,79,63,.6);border-color:#9de7cb}
+.voice-actions button:disabled,.home-actions button:disabled{opacity:.5;cursor:not-allowed}
+#voice-status{min-height:1.4em;display:block;margin:0 0 6px}
+#p-graves_house .pin{background:linear-gradient(145deg,rgba(29,36,69,.97),rgba(23,18,43,.98));border-color:rgba(142,183,255,.5)}
+#p-graves_house .thought{padding:12px;border-left:3px solid #8eb7ff;background:rgba(13,20,39,.38);line-height:1.5}
+@media(max-width:600px){
+ .voice-actions button,.home-actions button{flex:1 1 145px}
+ .chat-actions span{display:none}
+ .chat-actions button{flex:1}
+}
+
+.brain-connect{margin:.6rem 0;padding:.65rem;border:1px solid rgba(142,183,255,.23);border-radius:11px;background:rgba(8,12,27,.4)}
+.brain-connect label{display:block;margin-bottom:.3rem;color:#dce8ff;font:600 12px system-ui,sans-serif}
+.brain-connect-row{display:flex;flex-wrap:wrap;gap:6px}
+.brain-connect-row input{flex:1 1 210px;min-width:0;width:auto;background:rgba(8,11,28,.8);border:1px solid rgba(142,183,255,.34);border-radius:8px;padding:8px;color:#f1eeff;font-size:14px}
+.brain-connect-row button{border:1px solid rgba(142,183,255,.4);background:rgba(45,57,101,.7);border-radius:8px;color:#e6f0ff;padding:8px 10px;cursor:pointer}
+.brain-connect-row button.quiet{background:transparent}
+.brain-connect p{margin:.4rem 0 0}
