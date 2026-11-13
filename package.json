@@ -7,6 +7,8 @@
     "test": "node --test",
     "validate:state": "node scripts/state-contract.mjs state.json",
     "workshop": "node workshop/server.mjs",
-    "brain:shadow": "node scripts/run-brain-shadow.mjs"
+    "brain:shadow": "node scripts/run-brain-shadow.mjs",
+    "trading:demo": "node scripts/trading-lab.mjs demo",
+    "trading:help": "node scripts/trading-lab.mjs --help"
   }
 }
