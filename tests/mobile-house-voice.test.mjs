@@ -32,6 +32,9 @@ test("house and mobile voice controls are included without modifying published m
   }
   assert.match(world, /function gravesHouse\(/);
   assert.match(world, /crypt\(\); gravesHouse\(\);/);
+  assert.match(world, /const requestedPlace = new URLSearchParams\(location\.search\)\.get\('place'\)/);
+  assert.match(world, /preserveSavedPositionForDirectVisit = true/);
+  assert.match(world, /if \(directPlace === 'graves_house'\) show\('p-graves_house'\)/);
   assert.match(world, /voice\.speak\(reply\)/);
   assert.match(world, /normalizePrivateBrainUrl\(brainUrlInput.value\)/);
 });

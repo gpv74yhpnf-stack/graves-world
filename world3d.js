@@ -33,6 +33,9 @@ const PLACES = {
   grand_library:  { name:"The Grand Library",  pos:new THREE.Vector3(0,0,-25),   stand:new THREE.Vector3(0,0,-16.8), ring:new THREE.Vector3(0,0,-14.8), r:2.6, open:"Enter the Grand Library" },
   trading_lab:    { name:"The Trading Lab",     pos:new THREE.Vector3(28,0,1),    stand:new THREE.Vector3(28,0,5.1),   ring:new THREE.Vector3(28,0,7.1),   r:2.5, open:"Explore the Trading Lab" },
 };
+const requestedPlace = new URLSearchParams(location.search).get('place');
+const directPlace = Object.prototype.hasOwnProperty.call(PLACES, requestedPlace) ? requestedPlace : null;
+let preserveSavedPositionForDirectVisit = false;
 const KEYS = Object.keys(PLACES);
 const solids = []; // {x,z,r} simple circle colliders
 const ground = h => 0;
@@ -577,7 +580,7 @@ function updateTravel(){
 }
 $('#travel').addEventListener('click', e => { const button = e.target.closest('button'); if (button?.dataset.atlas){ show('atlas'); return; } const k = button?.dataset.go; if (k){ goTo(PLACES[k].ring.clone(), k); } });
 let pendingOpen = null;
-function goTo(v, openKey){ moveTarget.copy(v); hasTarget = true; marker.visible = true; marker.position.set(v.x, .07, v.z); pendingOpen = openKey || null; audio.chime(); }
+function goTo(v, openKey){ preserveSavedPositionForDirectVisit = false; moveTarget.copy(v); hasTarget = true; marker.visible = true; marker.position.set(v.x, .07, v.z); pendingOpen = openKey || null; audio.chime(); }
 const WATCH_STEPS = [
   { id:'town', label:'Shape the living town' },
   { id:'research', label:'Build Graves’ local research desk' },
@@ -1013,7 +1016,7 @@ function renderAtlas(){
 }
 
 function saveWorldPosition(){
-  if (SHOT) return;
+  if (SHOT || preserveSavedPositionForDirectVisit) return;
   try { localStorage.setItem(WORLD_POSITION_KEY, JSON.stringify({x:wisp.position.x, z:wisp.position.z})); } catch {}
 }
 function loadWorldPosition(){
@@ -1078,7 +1081,7 @@ function stepTownResidents(dt){
 function stepWisp(dt){
   let ix = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0), iz = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
   const speed = 8;
-  if (ix || iz){ hasTarget = false; marker.visible = false; pendingOpen = null; const s = Math.sin(cam.yaw), c = Math.cos(cam.yaw); tmp.set(ix * c + iz * s, 0, -ix * s + iz * c).normalize().multiplyScalar(speed * dt); wisp.position.add(tmp); }
+  if (ix || iz){ preserveSavedPositionForDirectVisit = false; hasTarget = false; marker.visible = false; pendingOpen = null; const s = Math.sin(cam.yaw), c = Math.cos(cam.yaw); tmp.set(ix * c + iz * s, 0, -ix * s + iz * c).normalize().multiplyScalar(speed * dt); wisp.position.add(tmp); }
   else if (hasTarget){ tmp.copy(moveTarget).sub(wisp.position); tmp.y = 0; const d = tmp.length(); if (d < .3){ hasTarget = false; marker.visible = false; if (pendingOpen){ show('p-' + pendingOpen); audio.open(); pendingOpen = null; } } else wisp.position.add(tmp.multiplyScalar(Math.min(1, speed * dt / d))); }
   collide(wisp.position, .35);
   wisp.position.y = groundY(wisp.position.x, wisp.position.z) + 1.1 + Math.sin(T * 2.2) * .12;
@@ -1185,6 +1188,14 @@ function frame(now){
     await refresh();
     // start Graves near the crypt door; he'll walk to wherever his mind says he is
     if (SHOT){ G.root.position.copy(PLACES[graves.home].stand); wisp.position.copy(PLACES[graves.home].stand).add(new THREE.Vector3(-.6, 1.1, 3.6)); cam.look.copy(wisp.position); cam.yaw = -.5; cam.dist = MOBILE ? 11 : 9; if (/over/.test(location.search)){ wisp.position.set(0, 1.1, 14); cam.look.copy(wisp.position); cam.dist = 34; cam.pitch = .62; cam.yaw = 0; } }
+    else if (directPlace) {
+      preserveSavedPositionForDirectVisit = true;
+      const destination = PLACES[directPlace], ring = destination.ring;
+      wisp.position.set(ring.x, groundY(ring.x, ring.z) + 1.1, ring.z + 2);
+      cam.look.set(destination.pos.x, directPlace === 'graves_house' ? 4 : 2, destination.pos.z);
+      cam.yaw = 0; cam.pitch = .48; cam.dist = MOBILE ? 22 : 19;
+      if (directPlace === 'graves_house') show('p-graves_house');
+    }
     else { const saved = loadWorldPosition(); if (saved) wisp.position.set(saved.x, groundY(saved.x, saved.z) + 1.1, saved.z); else wisp.position.copy(PLACES[graves.home].ring).add(new THREE.Vector3(0, 1.1, 5)); cam.look.copy(wisp.position); }
     activeWaypoint = resolveLandmarkId(localStorage.getItem(WORLD_WAYPOINT_KEY));
     setInterval(refresh, 300000);
