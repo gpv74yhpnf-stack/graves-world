@@ -87,3 +87,30 @@ body.world3d{margin:0;overflow:hidden;background:#0b0816;touch-action:none;overs
  #travel button{flex:0 0 auto}
  #prompt{max-width:calc(100vw - 32px);white-space:nowrap}
 }
+
+/* Local exploration atlas and compass waymarks */
+#waypoint-marker{position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px;border-radius:50%;background:#ffe29a;box-shadow:0 0 8px 3px rgba(255,210,120,.8);transform-origin:center;pointer-events:none}
+#waypoint-label{position:absolute;top:158px;right:10px;max-width:min(220px,62vw);padding:.3rem .5rem;border:1px solid rgba(255,217,138,.38);border-radius:9px;background:rgba(15,10,30,.8);color:#ffe29a;font:600 10px/1.35 system-ui,sans-serif;text-align:right;backdrop-filter:blur(6px);pointer-events:none}
+#travel button[data-atlas]{border-color:rgba(142,183,255,.55);color:#dce8ff}
+.atlas-pin{width:min(760px,100vw)!important}
+.atlas-heading{padding-right:40px}
+.atlas-heading h2{margin:.1rem 0 .5rem;color:#f1efff}
+.atlas-kicker{font:700 10px/1.4 system-ui,sans-serif;letter-spacing:.18em;color:#9de7cb}
+.atlas-progress{display:inline-flex;padding:.35rem .65rem;border:1px solid rgba(142,183,255,.35);border-radius:999px;background:rgba(9,10,24,.35);color:#dce8ff;font:600 12px system-ui,sans-serif}
+.atlas-biomes{display:flex;gap:.45rem;flex-wrap:wrap}
+.atlas-biome{border:1px solid color-mix(in srgb,var(--biome-accent) 55%,transparent);border-radius:999px;padding:.3rem .6rem;color:var(--ink);background:rgba(9,10,24,.35);font-size:12px}
+.atlas-landmark-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.atlas-landmark-heading h3{margin-bottom:.35rem}
+#atlas-clear-waymark{font-size:12px!important;height:32px!important}
+#atlas-clear-waymark:disabled{opacity:.48;cursor:default}
+.atlas-landmarks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:.55rem}
+.atlas-landmark{display:grid;grid-template-columns:1fr auto;align-items:center;gap:.2rem .7rem;padding:.65rem;border:1px solid rgba(142,183,255,.22);border-radius:12px;background:rgba(9,10,24,.25)}
+.atlas-landmark strong{color:#f1efff}
+.atlas-landmark .dim{grid-column:1}
+.atlas-landmark button{grid-column:2;grid-row:1 / span 2;font-size:11px!important;height:32px!important;white-space:nowrap}
+@media(max-width:600px){
+ #waypoint-label{top:156px;max-width:58vw;font-size:9px}
+ .atlas-landmark{grid-template-columns:1fr;align-items:start}
+ .atlas-landmark .dim,.atlas-landmark button{grid-column:1;grid-row:auto}
+ .atlas-landmark button{justify-self:start}
+}

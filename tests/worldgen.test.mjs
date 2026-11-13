@@ -9,6 +9,7 @@ import {
   chunkHash,
   chunksAround,
   createChunkRandom,
+  landmarkForCell,
   landmarkForChunk,
   worldGroundHeight
 } from '../src/worldgen/undercroft.mjs';
@@ -51,6 +52,10 @@ test('landmarks are stable, biome themed, and spread through the expanding world
   assert.deepEqual(landmarkForChunk(found.x, found.z), found.landmark);
   assert.equal(found.landmark.biomeId, biomeForChunk(found.x, found.z).id);
   assert.match(found.landmark.name, /^The .+/);
+  assert.equal(found.landmark.x, (found.x + 0.5) * CHUNK_SIZE);
+  assert.equal(found.landmark.z, (found.z + 0.5) * CHUNK_SIZE);
+  const [cellX, cellZ] = found.landmark.id.split(':').map(Number);
+  assert.deepEqual(landmarkForCell(cellX, cellZ), found.landmark);
 });
 
 test('terrain stays level in town and continuous through the generated frontier', () => {
