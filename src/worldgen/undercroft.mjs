@@ -83,8 +83,18 @@ export function landmarkForChunk(chunkX, chunkZ, seed = WORLD_SEED){
     name: 'The ' + LANDMARK_EPITHETS[(signature >>> 3) % LANDMARK_EPITHETS.length] + ' ' + nouns[(signature >>> 11) % nouns.length],
     type,
     biomeId: biome.id,
+    x: worldX,
+    z: worldZ,
     variant: (signature >>> 19) % 8
   });
+}
+
+export function landmarkForCell(cellX, cellZ, seed = WORLD_SEED){
+  if (!Number.isSafeInteger(cellX) || !Number.isSafeInteger(cellZ)) return null;
+  const placement = chunkHash(cellX, cellZ, seed ^ 0x5f356495);
+  const chunkX = cellX * LANDMARK_CELL_SIZE + placement % LANDMARK_CELL_SIZE;
+  const chunkZ = cellZ * LANDMARK_CELL_SIZE + Math.floor(placement / LANDMARK_CELL_SIZE) % LANDMARK_CELL_SIZE;
+  return landmarkForChunk(chunkX, chunkZ, seed);
 }
 
 export function worldGroundHeight(x, z){
