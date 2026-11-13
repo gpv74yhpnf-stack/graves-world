@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { runResearchCycle } from "../src/trading/research-cycle.mjs";
 import { createAlpacaPaperClient } from "../src/trading/alpaca-paper.mjs";
 import { parseDailyCsv, researchWalkForward, syntheticDemoBars } from "../src/trading/research.mjs";
 import {
@@ -13,6 +14,8 @@ function help() {
     "  node scripts/trading-lab.mjs demo",
     "  node scripts/trading-lab.mjs research <daily-bars.csv>",
     "  node scripts/trading-lab.mjs research-data <SYMBOL> <START-YYYY-MM-DD> <END-YYYY-MM-DD>",
+    "  node scripts/trading-lab.mjs research-once <SYMBOL>",
+    "  node scripts/trading-lab.mjs watch-data <SYMBOL>",
     "  node scripts/trading-lab.mjs paper-status",
     "  node scripts/trading-lab.mjs paper-preview <SYMBOL> <QTY> <LIMIT> <STOP> <TAKE-PROFIT>",
     "  node scripts/trading-lab.mjs paper-submit <SYMBOL> <QTY> <LIMIT> <STOP> <TAKE-PROFIT> --confirm-paper",
@@ -81,6 +84,26 @@ async function main() {
       openOrderCount: orders.length
     }, null, 2));
     return;
+  }
+  if (command === "research-once" || command === "watch-data") {
+    if (args.length !== 1) throw new Error("Expected one normalized ticker (e.g. SPY)");
+    const symbol = args[0].toUpperCase();
+    if (command === "research-once") {
+      console.log(JSON.stringify(await runResearchCycle({ client, symbol }), null, 2));
+      return;
+    }
+    console.log("Read-only market research cycle enabled for " + symbol + ". Stop with Ctrl+C.");
+    // Opt-in local process: no background service, no paper-order submissions.
+    while (true) {
+      try {
+        const result = await runResearchCycle({ client, symbol });
+        if (result.ran) console.log(JSON.stringify(result, null, 2));
+        else console.log(new Date().toISOString() + ": " + result.reason);
+      } catch (error) {
+        console.error(new Date().toISOString() + ": research cycle failed: " + error.message);
+      }
+      await new Promise(resolve => setTimeout(resolve, 60 * 60 * 1000));
+    }
   }
   if (command === "research-data") {
     if (args.length !== 3) throw new Error("Expected SYMBOL START-DATE END-DATE");
