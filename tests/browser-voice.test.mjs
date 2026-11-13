@@ -65,6 +65,6 @@ test("unsupported browser disables mic and offers typing without an exception", 
 test("dictation appends safely and never auto-submits", () => {
   assert.equal(appendDictation("Hello", "Graves", 30), "Hello Graves");
   assert.equal(appendDictation("Hello", "Graves", 5), "Hello");
-  assert.match(describeVoiceSupport({ recognitionAvailable: true, speechAvailable: false }), /Dictation/);
+  assert.match(describeVoiceSupport({ recognitionAvailable: true, speechAvailable: false }), /dictation/i);
   assert.match(describeVoiceSupport({ recognitionAvailable: false, speechAvailable: true }), /Spoken replies/);
 });
