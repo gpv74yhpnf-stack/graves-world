@@ -34,6 +34,7 @@ export function createLearningStore({ directory = defaultLearningDirectory() } =
   const statePath = path.join(directory, "state.json");
   const journalPath = path.join(directory, "provisional-findings.jsonl");
   const lockPath = path.join(directory, "learning.lock");
+  const heartbeatPath = path.join(directory, "worker-heartbeat.json");
 
   async function setup() { await mkdir(directory, { recursive: true, mode: 0o700 }); }
   async function readState() {
@@ -80,6 +81,21 @@ export function createLearningStore({ directory = defaultLearningDirectory() } =
       try { return [JSON.parse(line)]; } catch { return []; }
     });
   }
+  async function heartbeat({ phase = "waiting", nextCycleAt = null } = {}) {
+    if (!["waiting", "researching"].includes(phase)) throw new Error("Invalid worker phase");
+    await setup();
+    const tmp = heartbeatPath + "." + randomUUID() + ".tmp";
+    try {
+      await writeFile(tmp, JSON.stringify({
+        phase, lastSeenAt: new Date().toISOString(), nextCycleAt
+      }) + "\n", { flag: "wx", mode: 0o600 });
+      await rename(tmp, heartbeatPath);
+    } finally {
+      await unlink(tmp).catch(error => {
+        if (error?.code !== "ENOENT") throw error;
+      });
+    }
+  }
   async function withLock(task) {
     await setup();
     // Fail closed on an existing lock. Never break locks automatically.
@@ -92,10 +108,21 @@ export function createLearningStore({ directory = defaultLearningDirectory() } =
   }
   async function status() {
     const state = await readState();
+    let workerHeartbeat = null;
+    try {
+      const h = JSON.parse(await readFile(heartbeatPath, "utf8"));
+      const ageMs = Date.now() - Date.parse(h.lastSeenAt);
+      if (["waiting", "researching"].includes(h.phase) && Number.isFinite(ageMs) &&
+          ageMs >= 0 && ageMs < 150_000) {
+        workerHeartbeat = { phase: h.phase, lastSeenAt: h.lastSeenAt, nextCycleAt: h.nextCycleAt };
+      }
+    } catch {
+      // No running worker is confirmed; keep the rest of the journal readable.
+    }
     const records = (await recent(12)).filter(r => r.status === "provisional");
     return {
       mode: "local-provisional-learning",
-      active: false, // CLI runs only while locally scheduled, not remotely controlled.
+      workerHeartbeat, // recent heartbeat only; never proof the process is still running.
       attempts: state.attempts,
       successes: state.successes,
       lastAttemptAt: state.lastAttemptAt,
@@ -110,5 +137,5 @@ export function createLearningStore({ directory = defaultLearningDirectory() } =
       }))
     };
   }
-  return Object.freeze({ directory, readState, writeState, record, recent, withLock, status });
+  return Object.freeze({ directory, readState, writeState, record, recent, heartbeat, withLock, status });
 }
