@@ -10,7 +10,7 @@ function help() {
   console.log([
     "GRAVES LOCAL LEARNING ENGINE v1",
     "  node scripts/run-learning.mjs once     # one bounded web study",
-    "  node scripts/run-learning.mjs watch    # opt-in 90-minute loop while PC is on",
+    "  node scripts/run-learning.mjs watch    # opt-in 1-minute loop while PC is on",
     "  node scripts/run-learning.mjs status   # private journal summary, no web access",
     "  node scripts/run-learning.mjs help",
     "",
@@ -58,9 +58,10 @@ async function main() {
       const result = await engine.runOnce();
       console.log(JSON.stringify(result, null, 2));
       phase = "waiting";
-      const next = new Date(Date.now() + intervalMs);
+      let next = new Date(Date.now() + intervalMs);
       if (!result.ran && result.reason === "Daily bounded research budget reached") {
-        // Sleep until tomorrow instead of polling the exhausted budget.
+        // Sleep until the next UTC day, not one whole extra day.
+        next = new Date();
         next.setUTCHours(24, 0, 0, 0);
       }
       nextCycleAt = next.toISOString();
