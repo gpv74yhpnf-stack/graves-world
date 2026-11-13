@@ -1,9 +1,8 @@
 # Graves Autonomous Learning Engine v1
 
 **Status:** experimental, optional local worker (not running until started on the owner's PC).
-**Depends on:** the local web-research desk and guarded public HTTPS reader in
-the \`codex/live-world-voice-work-watch\` development branch. This is a stacked
-build, not a separate deployment of that branch.
+**Foundation:** the guarded local public HTTPS research reader and Grand Library desk
+merged from PR #26. This research worker is a separate optional feature.
 
 ## What "learning" means here
 
@@ -31,7 +30,7 @@ From a separate worktree after this stacked build is available:
     git worktree add --detach ..\graves-world-learning origin/graves-v2/autonomous-learning-engine-v1
     cd ..\graves-world-learning
 
-Make sure **Ollama** is running and \`qwen3.5:4b\` is installed.
+Make sure **Ollama** is running and `qwen3.5:4b` is installed.
 
 Run a single research experiment:
 
@@ -92,15 +91,18 @@ The public GitHub Pages version alone does not run the worker.
 
 ## Private storage
 
-Under \`%LOCALAPPDATA%\GravesPrivateMind\learning\` on Windows, or
-\`~/.graves-world/learning\` elsewhere:
+Under `%LOCALAPPDATA%\GravesPrivateMind\learning` on Windows, or
+`~/.graves-world/learning` elsewhere:
 
-- \`state.json\`: topic cursor, daily research quota, last attempt and
+- `state.json`: topic cursor, daily research quota, last attempt and
   suggested follow-up questions
-- \`provisional-findings.jsonl\`: bounded source-linked results and failures
-- \`learning.lock\`: fail-closed single-run guard
+- `provisional-findings.jsonl`: bounded source-linked results and failures
+- `learning.lock`: fail-closed single-run guard
+- `worker-heartbeat.json`: recent status and planned next cycle for the 3D panel
 
-The research journal is capped at 8 MB pending private archiving. The worker
+The 3D panel considers only a heartbeat less than 150 seconds old to be recent.
+A recent heartbeat is not proof the worker is still alive; stopping it will cause
+this indicator to expire. The research journal is capped at 8 MB pending private archiving. The worker
 does not delete or truncate existing notes automatically. Apply the existing
 Windows vault ACL bootstrap and, ideally, disk encryption; these files
 are not automatically encrypted by this module. If a crash leaves a lock,
@@ -112,7 +114,7 @@ inspect the running processes before manually clearing it.
     npm run validate:state
 
 No real website connection or Ollama model response is verified by automated
-unit tests. Use \`learning:once\` to verify the live network and local model.
+unit tests. Use `learning:once` to verify the live network and local model.
 
 ## Later extensions
 
