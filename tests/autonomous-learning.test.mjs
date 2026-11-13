@@ -178,3 +178,15 @@ test("3D Grand Library includes a learning progress surface", async () => {
   assert.match(world, /api\/learning\/status/);
   assert.match(world, /textContent='Local learning journal connected/);
 });
+
+
+test("learning heartbeat is locally recorded without falsely claiming a permanently running agent", async t => {
+  const store = await tempStore(t);
+  assert.equal((await store.status()).workerHeartbeat, null);
+  const nextCycleAt = new Date(Date.now() + 60_000).toISOString();
+  await store.heartbeat({ phase: "waiting", nextCycleAt });
+  const current = await store.status();
+  assert.equal(current.workerHeartbeat.phase, "waiting");
+  assert.equal(current.workerHeartbeat.nextCycleAt, nextCycleAt);
+  await assert.rejects(store.heartbeat({ phase: "executing commands" }), /Invalid worker phase/);
+});
