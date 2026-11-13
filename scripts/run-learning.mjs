@@ -39,11 +39,11 @@ async function main() {
     console.log(JSON.stringify(await engine.runOnce(), null, 2));
     return;
   }
-  console.log("Graves' private local study loop is running: at most 1 cycle per 90 minutes, 10 attempts per UTC day.");
-  console.log("New findings are PROVISIONAL research notes, not verified memory. Ctrl+C to stop.");
+  console.log("Graves' private local study loop is running: at most one attempt per minute, 10 attempts per UTC day.");
+  console.log("Notes are PROVISIONAL. Any research error STOPS the worker for diagnosis. Ctrl+C to stop.");
   // A recent local heartbeat lets the 3D Library display what the worker is
   // doing without publishing its private notes or claiming the process is alive forever.
-  const intervalMs = 90 * 60 * 1000;
+  const intervalMs = 60 * 1000;
   let phase = "researching";
   let nextCycleAt = null;
   const tick = () => store.heartbeat({ phase, nextCycleAt }).catch(error =>
@@ -54,19 +54,25 @@ async function main() {
     while (true) {
       phase = "researching";
       await store.heartbeat({ phase, nextCycleAt });
-      try {
-        console.log(JSON.stringify(await engine.runOnce(), null, 2));
-      } catch (error) {
-        console.error("Research cycle failed (will retry on the next scheduled tick): " +
-          String(error.message).slice(0, 240));
-      }
+      // Fail stop on errors. Never retry an unknown broken request unattended.
+      const result = await engine.runOnce();
+      console.log(JSON.stringify(result, null, 2));
       phase = "waiting";
-      nextCycleAt = new Date(Date.now() + intervalMs).toISOString();
+      const next = new Date(Date.now() + intervalMs);
+      if (!result.ran && result.reason === "Daily bounded research budget reached") {
+        // Sleep until tomorrow instead of polling the exhausted budget.
+        next.setUTCHours(24, 0, 0, 0);
+      }
+      nextCycleAt = next.toISOString();
       await store.heartbeat({ phase, nextCycleAt });
-      await delay(intervalMs);
+      await delay(Math.max(1000, next.getTime() - Date.now()));
     }
   } finally {
     clearInterval(ticker);
   }
 }
-main().catch(error => { console.error(error.message); process.exitCode = 1; });
+main().catch(error => {
+  console.error("Graves' learning worker STOPPED: " + String(error.message).slice(0, 300));
+  console.error("Inspect 'npm run learning:status', fix the cause, then restart 'npm run learning:watch'.");
+  process.exitCode = 1;
+});
