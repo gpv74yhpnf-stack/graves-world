@@ -1,0 +1,12 @@
+{
+  "name": "graves-world",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Graves World static town and safety tooling",
+  "scripts": {
+    "test": "node --test",
+    "validate:state": "node scripts/state-contract.mjs state.json",
+    "workshop": "node workshop/server.mjs",
+    "brain:shadow": "node scripts/run-brain-shadow.mjs"
+  }
+}
