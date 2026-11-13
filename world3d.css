@@ -114,3 +114,18 @@ body.world3d{margin:0;overflow:hidden;background:#0b0816;touch-action:none;overs
  .atlas-landmark .dim,.atlas-landmark button{grid-column:1;grid-row:auto}
  .atlas-landmark button{justify-self:start}
 }
+
+
+/* Mobile voice controls and the Lantern Hearth */
+.voice-actions,.home-actions{display:flex;flex-wrap:wrap;gap:8px;margin:9px 0}
+.voice-actions button,.home-actions button{border-radius:9px;border:1px solid rgba(142,183,255,.48);background:rgba(36,56,95,.85);color:#eef4ff;padding:9px 13px;min-height:44px;cursor:pointer;font:600 13px system-ui,sans-serif}
+.voice-actions button[aria-pressed="true"]{color:#a8ffdf;background:rgba(23,79,63,.6);border-color:#9de7cb}
+.voice-actions button:disabled,.home-actions button:disabled{opacity:.5;cursor:not-allowed}
+#voice-status{min-height:1.4em;display:block;margin:0 0 6px}
+#p-graves_house .pin{background:linear-gradient(145deg,rgba(29,36,69,.97),rgba(23,18,43,.98));border-color:rgba(142,183,255,.5)}
+#p-graves_house .thought{padding:12px;border-left:3px solid #8eb7ff;background:rgba(13,20,39,.38);line-height:1.5}
+@media(max-width:600px){
+ .voice-actions button,.home-actions button{flex:1 1 145px}
+ .chat-actions span{display:none}
+ .chat-actions button{flex:1}
+}
