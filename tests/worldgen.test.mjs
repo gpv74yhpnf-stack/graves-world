@@ -11,6 +11,7 @@ import {
   createChunkRandom,
   landmarkForCell,
   landmarkForChunk,
+  landmarkInscriptionFor,
   worldGroundHeight
 } from '../src/worldgen/undercroft.mjs';
 
@@ -56,6 +57,24 @@ test('landmarks are stable, biome themed, and spread through the expanding world
   assert.equal(found.landmark.z, (found.z + 0.5) * CHUNK_SIZE);
   const [cellX, cellZ] = found.landmark.id.split(':').map(Number);
   assert.deepEqual(landmarkForCell(cellX, cellZ), found.landmark);
+});
+
+test('every generated landmark has stable, authored inspection text', () => {
+  const found = new Map();
+  for (let z = -160; z <= 160 && found.size < 8; z++){
+    for (let x = -160; x <= 160; x++){
+      const landmark = landmarkForChunk(x, z);
+      if (landmark && !found.has(landmark.type)) found.set(landmark.type, landmark);
+      if (found.size === 8) break;
+    }
+  }
+  assert.equal(found.size, 8);
+  for (const landmark of found.values()){
+    const inscription = landmarkInscriptionFor(landmark);
+    assert.ok(inscription.length > 30);
+    assert.equal(landmarkInscriptionFor(landmark), inscription);
+  }
+  assert.equal(landmarkInscriptionFor(null), '');
 });
 
 test('terrain stays level in town and continuous through the generated frontier', () => {
