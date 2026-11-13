@@ -1,6 +1,7 @@
 /* Graves' World 3D. Original code; every model, texture and sound is generated here at runtime.
    Engine: three.js r160 (MIT) from jsDelivr. Live state: same GitHub issue #1 read by app.js loadState(). */
 import * as THREE from 'three';
+import { createBrowserVoiceController } from './src/voice/browser-voice.mjs';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -21,6 +22,7 @@ let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 214748364
 /* ---------- places (keys match state.location) ---------- */
 const PLACES = {
   crypt:          { name:"The Crypt",          pos:new THREE.Vector3(-24,0,-8),  stand:new THREE.Vector3(-24,0,-3.2), ring:new THREE.Vector3(-24,0,-2.2), r:2.4, open:"Read his journal" },
+  graves_house:   { name:"Graves\' House",        pos:new THREE.Vector3(-24,0,20),  stand:new THREE.Vector3(-24,0,25.3), ring:new THREE.Vector3(-24,0,27.1), r:2.5, open:"Visit Graves\' House" },
   lantern_lane:   { name:"Lantern Lane",       pos:new THREE.Vector3(-11,0,2),   stand:new THREE.Vector3(-11,0,3.5),  ring:new THREE.Vector3(-11,0,5),    r:2.4, open:"See how he's doing" },
   offering_stone: { name:"The Offering Stone", pos:new THREE.Vector3(1,0,9),     stand:new THREE.Vector3(-2.6,0,10.6), ring:new THREE.Vector3(1.4,0,12.2),   r:2.4, open:"Leave an offering" },
   bone_garden:    { name:"The Bone Garden",    pos:new THREE.Vector3(13,0,0),    stand:new THREE.Vector3(12,0,3),     ring:new THREE.Vector3(13,0,4.6),   r:2.4, open:"Read his letters" },
@@ -162,6 +164,67 @@ function shop(){
   add(new THREE.BoxGeometry(.9, .15, .65), MAT.paper, 3.9, 1.2, 2.2, g); add(new THREE.CylinderGeometry(.08, .1, 1.1, 6), MAT.wood, 3.9, .55, 2.2, g);
   solids.push({ x: p.x, z: p.z, r: 4.3 });
 }
+// A real home rather than the original crypt: warm hearth, book loft, blue-glass
+// windows and an observatory tower. Lightweight procedural geometry for phones.
+function gravesHouse(){
+  const p = PLACES.graves_house.pos, g = new THREE.Group();
+  g.position.copy(p); scene.add(g);
+  const nightWood = M(0x302b46), moonstone = M(0x6d7397), blueTimber = M(0x34476b);
+  const glass = glow(0x8eb7ff, 1.7), hearthLight = glow(0xffb86b, 2.1);
+  const roofMat = M(0x27345b), timber = M(0x46374e);
+  // Front of the house faces the walkable south-eastward porch (+z).
+  add(new THREE.BoxGeometry(8.4,.65,7.7), MAT.stoneDark, 0,.32,0,g);
+  add(new THREE.BoxGeometry(7.4,3.9,6.7),moonstone,0,2.25,0,g);
+  add(new THREE.BoxGeometry(6.7,2.8,6.1),nightWood,0,5.5,0,g);
+  const roof = add(new THREE.ConeGeometry(6.15,4.5,4),roofMat,0,8.75,0,g);
+  roof.rotation.y=Math.PI/4; roof.scale.z=.8;
+  // Half-timber framing with the familiar necromancer violet silhouette.
+  for(const x of [-3.5,3.5]){
+    add(new THREE.BoxGeometry(.25,6.5,.32),timber,x,3.5,3.5,g);
+    add(new THREE.BoxGeometry(.28,5.5,.28),blueTimber,x,3.3,-3.38,g);
+  }
+  for(const y of [3.7,6.65]){
+    add(new THREE.BoxGeometry(7.6,.3,.34),timber,0,y,3.54,g);
+  }
+  // The warm doorway, porch platform and porch lanterns.
+  add(new THREE.BoxGeometry(3.2,.3,3.5),MAT.stoneDark,0,.22,5.18,g);
+  add(new THREE.BoxGeometry(1.8,2.95,.22),MAT.face,0,1.7,3.58,g);
+  add(new THREE.BoxGeometry(1.52,2.74,.15),MAT.wood,0,1.7,3.72,g);
+  add(new THREE.SphereGeometry(.11,8,6),hearthLight,.55,1.65,3.85,g);
+  for(const x of [-2.2,2.2]){
+    add(new THREE.CylinderGeometry(.18,.24,3.8,8),moonstone,x,2,5.35,g);
+    add(new THREE.IcosahedronGeometry(.34,0),hearthLight,x,3.2,5.43,g);
+    add(new THREE.ConeGeometry(.4,.38,6),MAT.iron,x,3.72,5.43,g);
+  }
+  add(new THREE.BoxGeometry(5.5,.32,.7),roofMat,0,4.2,5.37,g);
+  // Blue-glass windows, outlined in iron, with a cross-like mullion.
+  for(const x of [-2.3,2.3]){
+    for(const y of [2.3,5.55]){
+      add(new THREE.BoxGeometry(1.45,1.65,.16),glass,x,y,3.55,g);
+      add(new THREE.BoxGeometry(.1,1.8,.22),MAT.iron,x,y,3.7,g);
+      add(new THREE.BoxGeometry(1.55,.1,.22),MAT.iron,x,y,3.71,g);
+    }
+  }
+  // The loft's circular observatory window, above the entrance.
+  add(new THREE.CircleGeometry(.65,24),glass,0,7.6,3.6,g);
+  add(new THREE.TorusGeometry(.73,.12,8,24),moonstone,0,7.6,3.7,g);
+  add(new THREE.BoxGeometry(.09,1.37,.16),blueTimber,0,7.6,3.72,g);
+  add(new THREE.BoxGeometry(1.35,.09,.16),blueTimber,0,7.6,3.73,g);
+  // A small book tower and smoky chimney keep the house unmistakable.
+  add(new THREE.BoxGeometry(1.5,6.9,1.5),nightWood,3.4,5.4,-2,g);
+  add(new THREE.ConeGeometry(1.35,3.8,5),MAT.roof,3.4,10.4,-2,g);
+  add(new THREE.BoxGeometry(1.1,3,.9),MAT.stoneDark,-2.3,9.1,-2.6,g);
+  add(new THREE.BoxGeometry(1.48,.3,1.2),moonstone,-2.3,10.6,-2.6,g);
+  // Cottage sign and a hearth light that can be found at night.
+  const inscription = textTexture("GRAVES' HOUSE",768,150,'#e0edff','#172440');
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.25,.85),
+    new THREE.MeshStandardMaterial({map:inscription,emissive:0x8eb7ff,emissiveMap:inscription,emissiveIntensity:.4}));
+  sign.position.set(0,4.4,5.75);g.add(sign);
+  const warm=new THREE.PointLight(0xffb86b,4,12,1.6);warm.position.set(0,3.25,5.4);g.add(warm);
+  flickers.push({light:warm,base:4,ph:1.8});
+  const blue=new THREE.PointLight(0x8eb7ff,3,12,1.8);blue.position.set(0,7,4.4);g.add(blue);
+  solids.push({x:p.x,z:p.z,r:4.9});
+}
 // The Grand Library: a moonstone scriptorium with twin lantern towers, a rose window,
  // deep-blue roofs and a welcoming, illuminated doorway. All geometry is original.
 const libraryMotes = [];
@@ -274,7 +337,7 @@ function gravestone(x, z){ const g = new THREE.Group(); g.position.set(x, 0, z);
   else { add(new THREE.BoxGeometry(.16, 1.3, .16), MAT.stone, 0, .65, 0, g); add(new THREE.BoxGeometry(.7, .16, .16), MAT.stone, 0, .95, 0, g); }
   solids.push({ x, z, r: .5 }); }
 
-crypt(); shop(); offeringStone(); boneGarden(); grandLibrary();
+crypt(); gravesHouse(); shop(); offeringStone(); boneGarden(); grandLibrary();
  // a processional cobble walk draws the eye from the old square to the new archive
 {
   const geo=new THREE.CylinderGeometry(.34,.38,.1,6), inst=new THREE.InstancedMesh(geo,MAT.stoneDark,110), d=new THREE.Object3D(); let n=0;
@@ -399,6 +462,7 @@ function applyState(s){
   STATE = s; const loc = PLACES[s.location] ? s.location : 'crypt'; graves.home = loc;
   graves.sleeping = /sleep/i.test(s.activity || '');
   stoneNote.visible = (s.offerings_waiting || 0) > 0;
+  $('#home-thought').textContent = s.thought || 'Graves has not left a new thought at the hearth.';
   $('#mood').innerHTML = `<b>${esc(s.mood?.label || '…')}</b> · ${esc(s.activity || '')} at ${esc(PLACES[loc].name)} <span class="dim">· updated ${ago(s.updated)}</span>`;
   // panels
   $('#now').innerHTML = `<div><div class="pill">Mood</div><div class="big">${esc(s.mood?.label)}</div><div class="dim small">${esc(s.mood?.why || "")}</div></div>
@@ -472,6 +536,17 @@ $('#snd').addEventListener('click', () => { const on = audio.toggle(); $('#snd')
 
 /* ---------- private in-world conversation with the local Graves brain ---------- */
 const chatMessages = [];
+const voice = createBrowserVoiceController({
+  input: $('#chat-input'),
+  dictationButton: $('#chat-mic'),
+  spokenRepliesButton: $('#chat-voice'),
+  status: $('#voice-status')
+});
+$('#home-speak').addEventListener('click', () => {
+  if (!STATE) return toast('The published mind is still loading');
+  voice.speak(gravesLine(), { explicit: true });
+});
+$('#home-talk').addEventListener('click', () => $('#talkb').click());
 const brainBase = () => (localStorage.getItem('graves_brain_url') || 'http://127.0.0.1:8787').replace(/\/$/, '');
 const chatStatus = $('#chat-status'), chatList = $('#chat-messages'), chatInput = $('#chat-input');
 function setChatStatus(message, kind=''){ chatStatus.textContent=message; chatStatus.className='chat-status'+(kind?' '+kind:''); }
@@ -486,18 +561,18 @@ function worldContext(){return {place:nearPlace?PLACES[nearPlace].name:null,loca
 async function checkBrain(){
   setChatStatus('Looking for the local AI brain…');
   try{const r=await fetch(brainBase()+'/api/health',{cache:'no-store'});if(!r.ok)throw new Error('Local bridge returned '+r.status);const data=await r.json();if(!data.connected)throw new Error(data.message||'Ollama is not responding.');setChatStatus('Connected · '+data.model+' · replies run on this computer','connected');}
-  catch(e){setChatStatus('Not connected. Start Ollama and the Graves local bridge on this computer. Setup guide below. ('+short(e.message,110)+')','error');}
+  catch(e){setChatStatus('AI unavailable here. On a phone, the public site cannot reach your private PC brain by default. A secure, authenticated mobile backend is needed. You can still hear published thoughts at Graves\' House. ('+short(e.message,80)+')','error');}
 }
 $('#talkb').addEventListener('click',()=>{show('p-conversation');checkBrain();setTimeout(()=>chatInput.focus(),120);});
 $('#chat-form').addEventListener('submit',async e=>{
   e.preventDefault();const message=chatInput.value.trim();if(!message)return;
   const send=$('#chat-send');chatInput.value='';chatMessages.push({role:'user',content:message});addChatMessage('user',message);send.disabled=true;setChatStatus('Graves is gathering his thoughts…');
-  try{const r=await fetch(brainBase()+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'The local mind could not answer.');const reply=String(data.reply||'The lantern flickers, but no words came through.').slice(0,5000);chatMessages.push({role:'assistant',content:reply});addChatMessage('assistant',reply);setChatStatus('Connected · '+(data.model||'local model'),'connected');$('#proposal-button').disabled=false;}
+  try{const r=await fetch(brainBase()+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'The local mind could not answer.');const reply=String(data.reply||'The lantern flickers, but no words came through.').slice(0,5000);chatMessages.push({role:'assistant',content:reply});addChatMessage('assistant',reply);voice.speak(reply);setChatStatus('Connected · '+(data.model||'local model'),'connected');$('#proposal-button').disabled=false;}
   catch(err){chatMessages.pop();chatInput.value=message;setChatStatus(err.message+' Check the local bridge and try again.','error');}
   finally{send.disabled=false;chatInput.focus();}
 });
 chatInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#chat-form').requestSubmit();}});
-$('#chat-clear').addEventListener('click',()=>{chatMessages.length=0;chatList.innerHTML='<div class="chat-empty">The lantern is waiting. Start us off.</div>';$('#proposal-button').disabled=true;$('#proposal-result').hidden=true;setChatStatus('Conversation cleared. This session was not saved.');});
+$('#chat-clear').addEventListener('click',()=>{voice.stopListening();chatMessages.length=0;chatList.innerHTML='<div class="chat-empty">The lantern is waiting. Start us off.</div>';$('#proposal-button').disabled=true;$('#proposal-result').hidden=true;setChatStatus('Conversation cleared. This session was not saved.');});
 $('#proposal-button').addEventListener('click',async()=>{
   if(!chatMessages.length)return;const button=$('#proposal-button');button.disabled=true;button.textContent='Drafting proposal…';
   try{const r=await fetch(brainBase()+'/api/propose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMessages.slice(-12),world:worldContext()})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Could not create a proposal.');const p=data.proposal,box=$('#proposal-result');box.hidden=false;box.replaceChildren();const title=document.createElement('h3');title.textContent='Proposal saved to your private vault';const name=document.createElement('p');name.textContent=p.title+' · '+p.kind;const summary=document.createElement('p');summary.textContent=p.summary;const details=document.createElement('p');details.textContent=(p.design_notes||[]).join(' • ');const status=document.createElement('p');status.textContent='Review required · Not applied to the world';box.append(title,name,summary,details,status);setChatStatus('Proposal saved locally for review. Nothing has been published.','connected');}
