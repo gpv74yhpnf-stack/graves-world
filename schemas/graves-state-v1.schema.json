@@ -1,0 +1,324 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gpv74yhpnf-stack.github.io/graves-world/schemas/graves-state-v1.schema.json",
+  "title": "Graves World public character state",
+  "description": "Compatibility schema for the existing live state in GitHub Issue #1. This validates the current shape without requiring a migration or changing the live state.",
+  "type": "object",
+  "required": [
+    "updated",
+    "day",
+    "time_of_day",
+    "weather",
+    "location",
+    "activity",
+    "thought",
+    "mood",
+    "needs",
+    "offerings_waiting",
+    "recent_moves",
+    "journal",
+    "memories",
+    "visitors",
+    "replies",
+    "sheet",
+    "stats"
+  ],
+  "properties": {
+    "updated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "day": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "time_of_day": {
+      "type": "string",
+      "minLength": 1
+    },
+    "weather": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "enum": [
+        "crypt",
+        "lantern_lane",
+        "offering_stone",
+        "bone_garden",
+        "ledger_shop"
+      ]
+    },
+    "activity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "thought": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "mood": {
+      "type": "object",
+      "required": [
+        "label",
+        "why"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "why": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": true
+    },
+    "needs": {
+      "type": "object",
+      "minProperties": 0,
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      }
+    },
+    "offerings_waiting": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "recent_moves": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": [
+          "t",
+          "did"
+        ],
+        "properties": {
+          "t": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "did": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "why": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "journal": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "required": [
+          "day",
+          "date",
+          "title",
+          "text"
+        ],
+        "properties": {
+          "day": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 10000
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "memories": {
+      "type": "object",
+      "required": [
+        "keeping",
+        "fading"
+      ],
+      "properties": {
+        "keeping": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "$ref": "#/$defs/memory"
+          }
+        },
+        "fading": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "$ref": "#/$defs/memory"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "visitors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "display": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "first_seen": {
+            "type": "string",
+            "format": "date"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date"
+          },
+          "notes": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "maxLength": 1000
+            }
+          },
+          "reply": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "greeting": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "replies": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "required": [
+          "to",
+          "date",
+          "offering",
+          "reply"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "offering": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "reply": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "sheet": {
+      "type": "object",
+      "required": [
+        "given",
+        "locked",
+        "added"
+      ],
+      "properties": {
+        "given": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "locked": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "added": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": true
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "$defs": {
+    "memory": {
+      "type": "object",
+      "required": [
+        "text",
+        "since"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "since": {
+          "type": "string",
+          "maxLength": 80
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

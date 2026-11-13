@@ -1,6 +1,6 @@
 # Graves World Cultural DNA v1
 
-**Status:** Public archive interface and proposal foundation  
+**Status:** Public read-only archive interface and local proposal foundation  
 **Purpose:** Turn cultural study into attributed, original, reviewable worldbuilding proposals.
 
 ## What is included
@@ -25,7 +25,7 @@ Cultural reference
   -> optional sanitized public projection
 ```
 
-The public site now exposes the read-only archive browser. The proposal engine remains a separate Node module; it does not yet connect to a model, mutate the private event log, create town assets, or publish creative proposals.
+The public site exposes the read-only archive browser. The proposal engine remains a separate Node module; it does not yet connect to a model, mutate the private event log, create town assets, or publish creative proposals.
 
 ## Archive record contract
 
