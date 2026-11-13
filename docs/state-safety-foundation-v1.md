@@ -1,5 +1,7 @@
 # State safety foundation v1
 
+> **Update (2026-11-13).** The live writer is identified in [grok-live-brain-v1.md](grok-live-brain-v1.md). The checker in this document is still not wired into that writer's publish step. The original limits below stay as written.
+
 **Status:** Development-only groundwork  
 **Branch:** `graves-v2/state-safety-foundation`  
 **Scope:** Offline validation and regression tests. No live state, site, inbox, credentials, or external service is changed.

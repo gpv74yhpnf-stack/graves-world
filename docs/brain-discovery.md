@@ -1,5 +1,7 @@
 # Brain discovery: current implementation
 
+> **Update (2026-11-13).** The live writer is Grok's brain turn, documented in [grok-live-brain-v1.md](grok-live-brain-v1.md). The sections below are the 2026-11-12 discovery record and stay as written.
+
 **Date:** 2026-11-12  
 **Repository:** `gpv74yhpnf-stack/graves-world`  
 **Baseline:** `main` at `b57f79aed393cc747edc6279213fcab92344a53c`  
