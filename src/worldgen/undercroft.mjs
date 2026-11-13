@@ -39,6 +39,55 @@ const LANDMARK_NOUNS = Object.freeze({
 });
 const LANDMARK_EPITHETS = Object.freeze(['Hollow','Wandering','Forgotten','Mourning','Veiled','Silent','Twilit','Buried']);
 
+const LANDMARK_INSCRIPTIONS = Object.freeze({
+  'resonance-spire':[
+    'A bell was set in each crystal, to carry a name farther than breath could travel.',
+    'The spire rings only when two lanterns pass beneath it together.',
+    'Each facet keeps the last direction chosen by a traveler who never returned.'
+  ],
+  'shattered-gate':[
+    'This arch divided the quarry from a road that no longer appears on any map.',
+    'The broken lintel bears a tally of loads carried out, but none brought in.',
+    'One side was raised by masons; the other was repaired with whatever the ash left behind.'
+  ],
+  'bone-crown':[
+    'The pale ribs mark a boundary older than the orchard around them.',
+    'A small plaque names every gardener, then leaves one line open for the next.',
+    'The crown was assembled from remains found facing the same direction.'
+  ],
+  'drowned-bell':[
+    'The bell has no clapper. Travelers say the fen sounds it when the water falls.',
+    'Bronze marks on the stem record flood years; the highest mark is unfinished.',
+    'The mire lantern was built for a ferry that stopped arriving.'
+  ],
+  'archive-relay':[
+    'Each pillar once held a copy of a letter. The center was left open for a reply.',
+    'The relay stood between libraries, carrying books through the dark.',
+    'Its shelves are empty, but the stones remember the order they held.'
+  ],
+  'blackwater-well':[
+    'The well is sealed, not abandoned. Its rim bears a map of the tunnels below.',
+    'The dark water reflects no sky; it reflects only the lantern you brought.',
+    'A chain descends farther than the stonework. No one recorded what it fastens to.'
+  ],
+  'mothlight-grove':[
+    'The pale blooms were planted to guide night workers between the old kilns.',
+    'A ring of moth carvings faces outward, marking a safe path through the caves.',
+    'The grove’s lamps were tuned to the amber of the old city windows.'
+  ],
+  'last-watch':[
+    'Three wardens stood here. The middle marker was deliberately left without a name.',
+    'The watch faces the route home, not the place it was built to guard.',
+    'A final instruction is carved inside the stone: Leave a light for whoever follows.'
+  ]
+});
+export function landmarkInscriptionFor(landmark){
+  if (!landmark || !Number.isInteger(landmark.variant)) return '';
+  const inscriptions = LANDMARK_INSCRIPTIONS[landmark.type];
+  return inscriptions ? inscriptions[((landmark.variant % inscriptions.length) + inscriptions.length) % inscriptions.length] : '';
+}
+
+
 export function chunkHash(chunkX, chunkZ, seed = WORLD_SEED){
   let h = Math.imul((chunkX | 0) ^ seed, 0x45d9f3b);
   h ^= Math.imul((chunkZ | 0) ^ Math.imul(seed, 0x27d4eb2d), 0x27d4eb2d);
