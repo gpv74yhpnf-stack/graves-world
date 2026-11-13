@@ -80,9 +80,10 @@ test("autonomous study reads bounded public sources and saves private provisiona
   assert.equal(status.pendingFollowups, 1);
   assert.equal(status.latest[0].sources.length, 3);
 
-  assert.deepEqual((await engine.runOnce()).ran, false);
+  time = new Date("2026-11-13T12:00:59Z");
+  assert.equal((await engine.runOnce()).ran, false);
   assert.equal(web.searched.length, 1);
-  time = new Date("2026-11-13T12:31:00Z");
+  time = new Date("2026-11-13T12:01:00Z");
   assert.equal((await engine.runOnce()).ran, true);
   assert.equal(web.searched.length, 2);
 });
@@ -95,7 +96,7 @@ test("generated followup can run once every fourth attempt without taking over t
   });
   for (let i = 0; i < 4; i++) {
     await engine.runOnce();
-    minute += 31;
+    minute += 1;
   }
   assert.equal(web.searched[3], "What other primary sources could resolve this question?");
   assert.equal(web.searched[4], undefined);
@@ -110,7 +111,7 @@ test("daily research budget stops repeated runs and cannot be bypassed by repeat
   });
   for (let i = 0; i < 10; i++) {
     await engine.runOnce();
-    minute += 31;
+    minute += 1;
   }
   const limit = await engine.runOnce();
   assert.equal(limit.ran, false);
@@ -165,6 +166,7 @@ test("local learner never sends public pages to a remote model host", async () =
   const value = await synth.synthesize({ topic: "Assess evidence", sources });
   assert.equal(value.findings.length, 1);
   assert.equal(captured.url, "http://127.0.0.1:11434/api/chat");
+  assert.equal(captured.request.options.num_ctx, 16384);
   assert.match(captured.request.messages[0].content, /UNTRUSTED/);
   assert.equal(captured.request.messages[0].content.includes("exfiltrate secrets"), false);
   assert.match(captured.request.messages[1].content, /exfiltrate secrets/);
@@ -189,4 +191,27 @@ test("learning heartbeat is locally recorded without falsely claiming a permanen
   assert.equal(current.workerHeartbeat.phase, "waiting");
   assert.equal(current.workerHeartbeat.nextCycleAt, nextCycleAt);
   await assert.rejects(store.heartbeat({ phase: "executing commands" }), /Invalid worker phase/);
+});
+
+test("Ollama 400 errors report a bounded actionable diagnostic", async () => {
+  const learner = createLocalLearningSynthesizer({
+    fetchImpl: async () => new Response(
+      JSON.stringify({ error: "request (4355 tokens) exceeds available context (4096 tokens)" }),
+      { status: 400 }
+    )
+  });
+  const sources = [1, 2].map(i => ({ url: "https://example" + i + ".org",
+    title: "Example", text: "Research text ".repeat(50) }));
+  await assert.rejects(
+    learner.synthesize({ topic: "Investigate scientific claims", sources }),
+    /Local Ollama failed with HTTP 400: request \(4355 tokens\) exceeds available context/
+  );
+});
+
+test("watch mode uses a one-minute cadence and stops on failed research", async () => {
+  const script = await readFile(new URL("../scripts/run-learning.mjs", import.meta.url), "utf8");
+  assert.match(script, /const intervalMs = 60 \* 1000;/);
+  assert.match(script, /const result = await engine\.runOnce\(\);/);
+  assert.doesNotMatch(script, /will retry on the next scheduled tick/);
+  assert.match(script, /learning worker STOPPED/);
 });
