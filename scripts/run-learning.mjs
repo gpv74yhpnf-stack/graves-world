@@ -41,16 +41,32 @@ async function main() {
   }
   console.log("Graves' private local study loop is running: at most 1 cycle per 90 minutes, 10 attempts per UTC day.");
   console.log("New findings are PROVISIONAL research notes, not verified memory. Ctrl+C to stop.");
-  // Watch has a strict bounded cadence. Network and model failures never spawn
-  // additional processes or accelerate the retry schedule.
-  while (true) {
-    try {
-      console.log(JSON.stringify(await engine.runOnce(), null, 2));
-    } catch (error) {
-      console.error("Research cycle failed (will retry on the next scheduled tick): " +
-        String(error.message).slice(0, 240));
+  // A recent local heartbeat lets the 3D Library display what the worker is
+  // doing without publishing its private notes or claiming the process is alive forever.
+  const intervalMs = 90 * 60 * 1000;
+  let phase = "researching";
+  let nextCycleAt = null;
+  const tick = () => store.heartbeat({ phase, nextCycleAt }).catch(error =>
+    console.error("Local heartbeat failed: " + String(error.message).slice(0, 180))
+  );
+  const ticker = setInterval(tick, 60 * 1000);
+  try {
+    while (true) {
+      phase = "researching";
+      await store.heartbeat({ phase, nextCycleAt });
+      try {
+        console.log(JSON.stringify(await engine.runOnce(), null, 2));
+      } catch (error) {
+        console.error("Research cycle failed (will retry on the next scheduled tick): " +
+          String(error.message).slice(0, 240));
+      }
+      phase = "waiting";
+      nextCycleAt = new Date(Date.now() + intervalMs).toISOString();
+      await store.heartbeat({ phase, nextCycleAt });
+      await delay(intervalMs);
     }
-    await delay(90 * 60 * 1000);
+  } finally {
+    clearInterval(ticker);
   }
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; });
