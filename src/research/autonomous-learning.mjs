@@ -24,7 +24,7 @@ export const DEFAULT_LEARNING_TOPICS = Object.freeze([
 ]);
 
 const MAX_DAILY_ATTEMPTS = 10;
-const MIN_GAP_MS = 30 * 60 * 1000;
+const MIN_GAP_MS = 60 * 1000;
 function cleanedFollowups(raw, currentQuestion) {
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, 2).filter(q => typeof q === "string")

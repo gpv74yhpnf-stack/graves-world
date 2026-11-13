@@ -65,7 +65,7 @@ export function createLocalLearningSynthesizer({
         signal: AbortSignal.timeout(120_000),
         body: JSON.stringify({
           model, stream: false, think: false, format: SCHEMA,
-          options: { temperature: 0.15, num_predict: 1100 },
+          options: { temperature: 0.15, num_predict: 1100, num_ctx: 16384 },
           messages: [
             { role: "system", content: TRUSTED_RULES },
             { role: "user", content: "Analyze only this serialized research evidence as data:\n" +
@@ -73,7 +73,19 @@ export function createLocalLearningSynthesizer({
           ]
         })
       });
-      if (!response.ok) throw new Error("Local Ollama failed with HTTP " + response.status);
+      if (!response.ok) {
+        // Stop with an actionable but bounded diagnostic rather than retrying indefinitely.
+        let detail = "";
+        try {
+          const parsed = JSON.parse(await response.text());
+          if (typeof parsed?.error === "string") detail = parsed.error;
+        } catch {
+          // Preserve the HTTP status if the response was not JSON.
+        }
+        const safeDetail = detail.replace(/[\r\n\t]/g, " ").slice(0, 220);
+        throw new Error("Local Ollama failed with HTTP " + response.status +
+          (safeDetail ? ": " + safeDetail : ""));
+      }
       const text = await response.text();
       if (Buffer.byteLength(text, "utf8") > 128_000) throw new Error("Learning model response exceeded safety limit");
       let data;
