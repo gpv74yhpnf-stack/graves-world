@@ -10,6 +10,7 @@ Status: experimental feature branch. Nothing in this branch enables live orders,
 - Experiment results written to a private local journal, outside the public repository.
 - Read-only Alpaca account/status/positions/open-order checks.
 - Historical Alpaca IEX daily bars, subject to account and feed availability.
+- An opt-in hourly, read-only research loop that journals only when completed daily bars change.
 - A narrowly constrained, optional PAPER buy-bracket order preview/submit path and paper-order cancellation.
 - Local paper kill switch and a private equity-peak baseline.
 - No live account API, futures execution adapter, options, short-selling, or leverage order path.
@@ -38,7 +39,16 @@ Close the terminal or clear them when finished.
 
     node scripts/trading-lab.mjs paper-status
     node scripts/trading-lab.mjs research-data SPY 2024-01-02 2025-12-31
+    node scripts/trading-lab.mjs research-once SPY
+    node scripts/trading-lab.mjs watch-data SPY
     node scripts/trading-lab.mjs paper-preview SPY 1 400 390 420
+
+Research-once runs one completed-bar, deduplicated research cycle. Watch-data
+rechecks at most once per hour while that terminal and PC remain running,
+records only changed completed daily bars, and can be stopped with Ctrl+C.
+It NEVER submits an order or runs in the background after the terminal closes.
+Repeatedly viewing the same holdout results can itself cause overfitting;
+this cycle's historical results must not be used as proof of live readiness.
 
 The first paper-status call initializes a local peak-equity baseline.
 Previews require the paper market to be open, a valid equity asset, cash, positions,
@@ -102,7 +112,7 @@ No API key is saved in the journal. Paper-risk.json is the local equity baseline
 1. Deterministic market-data snapshot/versioning and broader walk-forward folds.
 2. A benchmark including dividend/split adjustment, realistic execution costs,
    and data-quality checks across multiple asset classes.
-3. Event-driven local research scheduler with a no-new-data deduplication rule.
+3. Robust local research service/scheduler with independent crash recovery and notifications.
 4. Fill/rejection reconciliation, broker-side stops, account-wide monitoring,
    restart-safe order state, alerting and emergency order cancellation.
 5. Read-only dashboard in the private workshop, with risk and test history.
