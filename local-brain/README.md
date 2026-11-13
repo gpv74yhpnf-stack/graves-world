@@ -6,12 +6,12 @@ This local bridge lets the hosted 3D town talk to an Ollama model running on **y
 - Windows 10/11
 - Node.js 20+
 - Ollama installed and running
-- A local model (default: qwen3.5:4b)
+- A local [DeepSeek V4 Pro Qwen3.5 9B GGUF](https://huggingface.co/mradermacher/DeepSeek-V4-Pro-Qwen3.5-9B-UNCENSORED-heretic-i1-GGUF) model (default quantization: Q4_K_M)
 
 ## Start it
 1. Pull the model if it is not installed:
    ```powershell
-   ollama pull qwen3.5:4b
+   ollama pull hf.co/mradermacher/DeepSeek-V4-Pro-Qwen3.5-9B-UNCENSORED-heretic-i1-GGUF:Q4_K_M
    ```
 2. Start the bridge from the repository root:
    ```powershell
@@ -19,7 +19,7 @@ This local bridge lets the hosted 3D town talk to an Ollama model running on **y
    ```
 3. Leave that terminal open. Visit the [3D world](https://gpv74yhpnf-stack.github.io/graves-world/) on the **same computer** and press **Talk**.
 
-The bridge listens only on 127.0.0.1:8787. Ollama is expected at 127.0.0.1:11434. To use another model, set $env:OLLAMA_MODEL before running the start script.
+The bridge listens only on 127.0.0.1:8787. Ollama is expected at 127.0.0.1:11434. The default Q4_K_M model is about 5.6 GB. To use another installed model, set $env:OLLAMA_MODEL before running the start script.
 
 ## What works
 - In-world text chat streams replies from the local Ollama model as Graves writes them.
@@ -47,6 +47,6 @@ The bridge listens only on 127.0.0.1:8787. Ollama is expected at 127.0.0.1:11434
 
 ## Troubleshooting
 - If Ollama is unavailable, open the Ollama app and run ollama list.
-- If the model is missing, run ollama pull qwen3.5:4b.
+- If the model is missing, run ollama pull hf.co/mradermacher/DeepSeek-V4-Pro-Qwen3.5-9B-UNCENSORED-heretic-i1-GGUF:Q4_K_M.
 - Keep the PowerShell bridge window open.
 - If the browser blocks the local connection, use the official HTTPS GitHub Pages site and check that the bridge is running.

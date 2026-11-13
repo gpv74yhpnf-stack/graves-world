@@ -45,7 +45,7 @@ body.world3d{margin:0;overflow:hidden;background:#0b0816;touch-action:none;overs
 .talk-kicker{font:700 10px/1.4 system-ui,sans-serif;letter-spacing:.18em;color:#9de7cb}
 .talk-sigil{font-size:2.2rem;color:#8eb7ff;text-shadow:0 0 22px #8eb7ff}
 .talk-intro{max-width:620px;margin:.45rem 0 .8rem}
-.chat-status{font:12px system-ui,sans-serif;color:#f0d59b;padding:.45rem .65rem;border:1px solid rgba(230,199,139,.3);border-radius:9px;background:rgba(9,10,24,.35);margin:.6rem 0}
+.chat-status{font:12px system-ui,sans-serif;color:#f0d59b;padding:.45rem .65rem;border:1px solid rgba(230,199,139,.3);border-radius:9px;background:rgba(9,10,24,.35);margin:.6rem 0;overflow-wrap:anywhere}
 .chat-status.connected{color:#9de7cb;border-color:rgba(157,231,203,.35)}
 .chat-status.error{color:#ffb6bd;border-color:rgba(255,120,140,.4)}
 .chat-messages{height:min(34vh,330px);min-height:160px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:12px;background:rgba(7,9,24,.42);border:1px solid rgba(142,183,255,.18);border-radius:12px}

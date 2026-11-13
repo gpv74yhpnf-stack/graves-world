@@ -10,7 +10,7 @@ import { createLearningStore } from '../src/research/learning-store.mjs';
 
 const HOST='127.0.0.1', PORT=Number(process.env.GRAVES_BRAIN_PORT||8787);
 const OLLAMA_URL=(process.env.OLLAMA_URL||'http://127.0.0.1:11434').replace(/\/$/,'');
-const MODEL=process.env.OLLAMA_MODEL||'qwen3.5:4b';
+const MODEL=process.env.OLLAMA_MODEL||'hf.co/mradermacher/DeepSeek-V4-Pro-Qwen3.5-9B-UNCENSORED-heretic-i1-GGUF:Q4_K_M';
 const ALLOWED_ORIGINS=new Set(['https://gpv74yhpnf-stack.github.io','http://localhost:8787','http://127.0.0.1:8787','http://localhost:4173','http://127.0.0.1:4173']);
 const privateRoot=process.env.GRAVES_PRIVATE_DIR||(process.env.LOCALAPPDATA?path.join(process.env.LOCALAPPDATA,'GravesPrivateMind'):path.join(os.homedir(),'.graves-world'));
 const webResearch=createWebResearch();
