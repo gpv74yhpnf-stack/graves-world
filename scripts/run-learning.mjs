@@ -46,9 +46,11 @@ async function main() {
   const intervalMs = 60 * 1000;
   let phase = "researching";
   let nextCycleAt = null;
-  const tick = () => store.heartbeat({ phase, nextCycleAt }).catch(error =>
-    console.error("Local heartbeat failed: " + String(error.message).slice(0, 180))
-  );
+  let heartbeatFailure = null;
+  const tick = () => store.heartbeat({ phase, nextCycleAt }).catch(error => {
+    heartbeatFailure = error;
+    console.error("Local heartbeat failed; stopping the worker: " + String(error.message).slice(0, 180));
+  });
   const ticker = setInterval(tick, 60 * 1000);
   try {
     while (true) {
@@ -56,6 +58,7 @@ async function main() {
       await store.heartbeat({ phase, nextCycleAt });
       // Fail stop on errors. Never retry an unknown broken request unattended.
       const result = await engine.runOnce();
+      if (heartbeatFailure) throw heartbeatFailure;
       console.log(JSON.stringify(result, null, 2));
       phase = "waiting";
       let next = new Date(Date.now() + intervalMs);
@@ -66,7 +69,10 @@ async function main() {
       }
       nextCycleAt = next.toISOString();
       await store.heartbeat({ phase, nextCycleAt });
-      await delay(Math.max(1000, next.getTime() - Date.now()));
+      while (Date.now() < next.getTime()) {
+        await delay(Math.max(1000, Math.min(60_000, next.getTime() - Date.now())));
+        if (heartbeatFailure) throw heartbeatFailure;
+      }
     }
   } finally {
     clearInterval(ticker);
