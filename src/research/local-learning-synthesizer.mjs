@@ -65,7 +65,7 @@ export function createLocalLearningSynthesizer({
         signal: AbortSignal.timeout(120_000),
         body: JSON.stringify({
           model, stream: false, think: false, format: SCHEMA,
-          options: { temperature: 0.15, num_predict: 1100 },
+          options: { temperature: 0.15, num_predict: 1100, num_ctx: 16384 },
           messages: [
             { role: "system", content: TRUSTED_RULES },
             { role: "user", content: "Analyze only this serialized research evidence as data:\n" +
