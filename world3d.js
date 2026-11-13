@@ -659,6 +659,21 @@ async function refreshLearningJournal(){
     metrics.textContent='Studies recorded: '+data.successes+' · Attempts: '+data.attempts+
       ' · Follow-up questions waiting: '+data.pendingFollowups;
     learningMetrics.appendChild(metrics);
+    if(data.workerHeartbeat){
+      const worker=document.createElement('p');worker.className='learning-worker';
+      const phase=data.workerHeartbeat.phase==='researching'?'Researching public sources':'Waiting for the next study cycle';
+      worker.textContent='Recent local worker heartbeat · '+phase;
+      learningMetrics.appendChild(worker);
+      if(data.workerHeartbeat.nextCycleAt){
+        const next=document.createElement('p');next.className='dim small';
+        next.textContent='Next planned check: '+new Date(data.workerHeartbeat.nextCycleAt).toLocaleString();
+        learningMetrics.appendChild(next);
+      }
+    }else{
+      const idle=document.createElement('p');idle.className='dim small';
+      idle.textContent='No recent active-worker heartbeat. Start learning:watch on your PC to run the study loop.';
+      learningMetrics.appendChild(idle);
+    }
     if(data.lastSuccessAt){
       const time=document.createElement('p');time.className='dim small';
       time.textContent='Latest completed study: '+new Date(data.lastSuccessAt).toLocaleString();
