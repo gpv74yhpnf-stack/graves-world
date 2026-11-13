@@ -3,7 +3,7 @@
 <title>Graves' World 3D: walk the underworld town of a little necromancer</title>
 <meta name="description" content="Walk a tiny 3D underworld town as a lantern wisp. Find Graves, the little necromancer, leave an offering on the stone, and he'll remember you.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%AF%EF%B8%8F%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="world3d.css">
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="world3d.css?v=house-voice-20261113">
 <script>
 /* WebGL check first: no WebGL means the 2D town. */
 (function(){try{var c=document.createElement('canvas');if(!(window.WebGLRenderingContext&&(c.getContext('webgl2')||c.getContext('webgl'))))throw 0;}catch(e){location.replace('town.html?nowebgl=1');}
@@ -87,6 +87,11 @@
 <div class="talk-heading"><div><div class="talk-kicker">THE PRIVATE WORKSHOP</div><h2>Speak with Graves</h2></div><span class="talk-sigil">✦</span></div>
 <p class="dim talk-intro">Talk with Graves by typing or using your microphone where supported. Your device can read replies aloud. Live AI conversations need a connected, authorized brain service.</p>
 <div id="chat-status" class="chat-status" role="status">Checking the local mind…</div>
+<div class="brain-connect">
+  <label for="brain-url">Private brain connection (optional)</label>
+  <div class="brain-connect-row"><input id="brain-url" type="url" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://your-pc.your-tailnet.ts.net" aria-describedby="brain-connect-help"><button type="button" id="brain-connect-button">Connect</button><button type="button" class="quiet" id="brain-disconnect-button">Use local</button></div>
+  <p id="brain-connect-help" class="dim small">On a phone, connect your PC through private Tailscale Serve (not Funnel). Both devices must be in your tailnet. No passwords or API keys belong in this field.</p>
+</div>
 <div id="chat-messages" class="chat-messages" aria-live="polite"><div class="chat-empty">The lantern is waiting. Start us off.</div></div>
 <form id="chat-form" class="chat-form"><textarea id="chat-input" rows="2" maxlength="1800" placeholder="What shall we imagine or build?" aria-label="Message Graves"></textarea>
 <div class="voice-actions"><button id="chat-mic" type="button" aria-label="Dictate a message" aria-pressed="false">🎙 Dictate</button><button id="chat-voice" type="button" aria-pressed="false">🔈 Spoken replies off</button></div>
@@ -100,5 +105,5 @@
 
 <noscript><p style="padding:2rem">Graves' World 3D needs JavaScript. <a href="town.html">Open the 2D town</a>.</p></noscript>
 <script src="config.js"></script><script src="app.js"></script>
-<script type="module" src="world3d.js"></script>
+<script type="module" src="world3d.js?v=house-voice-20261113"></script>
 </body></html>
