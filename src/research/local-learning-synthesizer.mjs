@@ -82,7 +82,7 @@ export function createLocalLearningSynthesizer({
         } catch {
           // Preserve the HTTP status if the response was not JSON.
         }
-        const safeDetail = detail.replace(/[\\r\\n\\t]/g, " ").slice(0, 220);
+        const safeDetail = detail.replace(/[\r\n\t]/g, " ").slice(0, 220);
         throw new Error("Local Ollama failed with HTTP " + response.status +
           (safeDetail ? ": " + safeDetail : ""));
       }
