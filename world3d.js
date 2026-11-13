@@ -644,6 +644,72 @@ const brainBase = () => {
   const saved = savedPrivateBrain();
   return saved ? normalizePrivateBrainUrl(saved) : 'http://127.0.0.1:8787';
 };
+/* ---------- autonomous learning journal: private local read-only projection ---------- */
+const learningStatus=$('#learning-status'),learningMetrics=$('#learning-metrics'),learningNotes=$('#learning-notes');
+async function refreshLearningJournal(){
+  learningStatus.textContent='Checking the locally running learning worker…';
+  learningStatus.className='chat-status';
+  learningMetrics.replaceChildren();learningNotes.replaceChildren();
+  try{
+    const response=await fetch(brainBase()+'/api/learning/status',{cache:'no-store'});
+    if(!response.ok)throw new Error('Local learning status returned '+response.status);
+    const data=await response.json();
+    if(data.mode!=='local-provisional-learning')throw new Error('Learning status is not available');
+    const metrics=document.createElement('p');
+    metrics.textContent='Studies recorded: '+data.successes+' · Attempts: '+data.attempts+
+      ' · Follow-up questions waiting: '+data.pendingFollowups;
+    learningMetrics.appendChild(metrics);
+    if(data.lastSuccessAt){
+      const time=document.createElement('p');time.className='dim small';
+      time.textContent='Latest completed study: '+new Date(data.lastSuccessAt).toLocaleString();
+      learningMetrics.appendChild(time);
+    }
+    if(data.lastError){
+      const error=document.createElement('p');error.className='dim small';
+      error.textContent='Most recent research difficulty: '+String(data.lastError).slice(0,240);
+      learningMetrics.appendChild(error);
+    }
+    for(const item of Array.isArray(data.latest)?data.latest.slice(0,4):[]){
+      const card=document.createElement('article');card.className='learning-card';
+      const heading=document.createElement('h3');heading.textContent=String(item.title||item.topic||'Research note').slice(0,200);
+      const label=document.createElement('small');label.textContent='PROVISIONAL · '+String(item.topic||'').slice(0,180);
+      const overview=document.createElement('p');overview.textContent=String(item.overview||'').slice(0,1600);
+      card.append(heading,label,overview);
+      const sources=document.createElement('div');sources.className='learning-sources';
+      for(const source of Array.isArray(item.sources)?item.sources.slice(0,3):[]){
+        try{
+          const url=new URL(source.url);
+          if(url.protocol!=='https:'||url.username||url.password)continue;
+          const link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
+          link.textContent='Source: '+String(source.title||url.hostname).slice(0,120);
+          sources.appendChild(link);
+        }catch{}
+      }
+      card.appendChild(sources);
+      if(item.unknowns?.length){
+        const uncertain=document.createElement('p');uncertain.className='dim small';
+        uncertain.textContent='Still uncertain: '+item.unknowns.join(' · ').slice(0,600);
+        card.appendChild(uncertain);
+      }
+      learningNotes.appendChild(card);
+    }
+    if(!learningNotes.children.length){
+      const empty=document.createElement('p');empty.className='dim';
+      empty.textContent='No provisional studies yet. Start the local learning worker using the setup guide.';
+      learningNotes.appendChild(empty);
+    }
+    learningStatus.textContent='Local learning journal connected. These are unreviewed notes, not authoritative memories.';
+    learningStatus.className='chat-status connected';
+  }catch{
+    learningStatus.textContent='Private learning journal unavailable. The public website does not run the agent. Start the latest Graves local bridge on your computer and run the local learning worker.';
+    learningStatus.className='chat-status error';
+  }
+}
+$('#open-learning-progress').addEventListener('click',()=>{
+  show('p-learning');refreshLearningJournal();
+});
+$('#learning-refresh').addEventListener('click',refreshLearningJournal);
+
 const researchForm=$('#web-research-form'),researchQuery=$('#web-research-query'),researchStatus=$('#web-research-status'),researchResults=$('#web-research-results'),researchStudyButton=$('#web-research-study'),researchStudyResult=$('#web-research-study-result'),researchSaveButton=$('#web-research-save');
 let currentResearchResults=[],currentStudy=null;
 function setResearchStatus(message,kind=''){researchStatus.textContent=message;researchStatus.className='chat-status'+(kind?' '+kind:'');}
