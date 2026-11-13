@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trading Lab · Graves' World</title>
+  <meta name="description" content="A public overview of Graves' experimental, local-first trading research prototype.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%AF%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <a class="brand" href="index.html">🕯️ Graves' World</a>
+    <nav aria-label="Main navigation">
+      <a href="index.html">3D World</a>
+      <a href="town.html">Town (2D)</a>
+      <a href="memories.html">Memories</a>
+      <a href="trading-lab.html" aria-current="page">Trading Lab</a>
+      <a href="sheet.html">Who he is</a>
+      <a href="how.html">How it works</a>
+      <a href="shop.html">Shop</a>
+      <a href="library.html">Grand Library</a>
+    </nav>
+  </header>
+
+  <main>
+    <p class="dim small">THE UNDERWORLD LEDGER · LOCAL RESEARCH PROJECT</p>
+    <h1>Graves Trading Lab</h1>
+    <p class="big">A private, local-first workspace for testing trading ideas carefully and keeping the public town separate from the authoritative mind.</p>
+
+    <section class="card" aria-labelledby="status-heading">
+      <h2 id="status-heading">Current status</h2>
+      <p>The trading lab is an experimental companion prototype under review. This public page is an overview; it does not connect to a broker, show live prices, or place orders. The prototype runs locally and keeps its research journal and risk records on the owner's computer.</p>
+      <p class="dim">No strategy has been shown to predict profits, and the prototype is not a production trading system.</p>
+    </section>
+
+    <section class="card" aria-labelledby="research-heading">
+      <h2 id="research-heading">Research workflow</h2>
+      <ul>
+        <li>Study historical daily bars using a training period and a separate holdout period.</li>
+        <li>Simulate entries at the next session's open, with configurable fees and slippage.</li>
+        <li>Keep experiment records local; the demonstration uses fictional synthetic data.</li>
+        <li>Optionally retrieve read-only historical data and run a bounded research cycle.</li>
+      </ul>
+      <p>Historical results depend on the data and assumptions used. A holdout does not guarantee future performance, and repeatedly tuning against it can lead to overfitting.</p>
+    </section>
+
+    <section class="card" aria-labelledby="paper-heading">
+      <h2 id="paper-heading">Paper-only safeguards in the prototype</h2>
+      <ul>
+        <li>The broker adapter is fixed to Alpaca's paper-trading endpoint; there is no live-order adapter.</li>
+        <li>Any simulated order requires a separate, explicit local confirmation.</li>
+        <li>Policy checks constrain the prototype to whole-share, long-only U.S. equity buys and apply account, exposure, cash-reserve, and drawdown limits.</li>
+        <li>A local kill switch blocks new submissions. Existing paper orders still need to be canceled separately.</li>
+      </ul>
+      <p class="dim">These checks cannot guarantee a maximum loss. Orders can fill differently than expected, prices can gap past stops, and this prototype is not a production-grade risk gateway.</p>
+    </section>
+
+    <section class="card" aria-labelledby="privacy-heading">
+      <h2 id="privacy-heading">What stays private</h2>
+      <p>Broker credentials, account balances, positions, orders, and the research journal stay local. They are not sent to this page or added to the public town. Never paste brokerage credentials into chat, source files, screenshots, or public issues.</p>
+      <p>Graves' public town is a sanitized projection. It does not become the authoritative mind, and raw visitor offerings are not trading inputs.</p>
+    </section>
+
+    <section class="card" aria-labelledby="review-heading">
+      <h2 id="review-heading">Prototype review</h2>
+      <p>The companion implementation, setup notes, and tests are available in the separate pull request for review. It has not been merged into this live site or verified with an owner's brokerage account.</p>
+      <p><a href="https://github.com/gpv74yhpnf-stack/graves-world/pull/22" rel="noopener noreferrer">Review the experimental Trading Lab implementation on GitHub</a></p>
+    </section>
+
+    <p class="dim small">Educational project overview only. This is not a trading signal, a recommendation, or individualized financial advice. Paper trading does not establish that a strategy will work with real money.</p>
+    <p><a href="index.html">← Return to Graves' World</a></p>
+  </main>
+
+  <footer>Graves lives in the Otherworld Ledger's underworld town. · <a href="how.html">How it works</a></footer>
+</body>
+</html>
