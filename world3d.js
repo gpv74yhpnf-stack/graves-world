@@ -5,7 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { CHUNK_SIZE, CHUNK_LOAD_RADIUS, CHUNK_UNLOAD_RADIUS, biomeForChunk, chunksAround, createChunkRandom, landmarkForChunk, worldGroundHeight } from './src/worldgen/undercroft.mjs';
+import { CHUNK_SIZE, CHUNK_LOAD_RADIUS, CHUNK_UNLOAD_RADIUS, UNDERWORLD_BIOMES, biomeForChunk, chunksAround, createChunkRandom, landmarkForCell, landmarkForChunk, worldGroundHeight } from './src/worldgen/undercroft.mjs';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -14,6 +14,7 @@ const SHOT = new URLSearchParams(location.search).get('shot'); // used for headl
 let QUALITY = +(localStorage.getItem('g3d_q') ?? (MOBILE ? 1 : 2)); // 0 low, 1 medium, 2 high
 let renderScale = 1; const PIXEL_RATIO_CAP = [1, 1.5, 2];
 const HEADING_NAMES = ['North', 'Northeast', 'East', 'Southeast', 'South', 'Southwest', 'West', 'Northwest'];
+const COMPASS_SHORT_NAMES = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const lerp = THREE.MathUtils.lerp, clamp = THREE.MathUtils.clamp;
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
@@ -429,16 +430,18 @@ function gravesLine(){
 /* ---------- HUD: travel buttons, prompt, panels ---------- */
 let nearPlace = null, openPanel = null;
 function updateTravel(){
-  $('#travel').innerHTML = KEYS.map(k => `<button data-go="${k}" class="${STATE && STATE.location === k ? 'here' : ''}" title="${STATE && STATE.location === k ? 'Graves is here' : ''}">${STATE && STATE.location === k ? '💀 ' : ''}${PLACES[k].name.replace('The ', '')}</button>`).join('');
+  $('#travel').innerHTML = KEYS.map(k => `<button data-go="${k}" class="${STATE && STATE.location === k ? 'here' : ''}" title="${STATE && STATE.location === k ? 'Graves is here' : ''}">${STATE && STATE.location === k ? '💀 ' : ''}${PLACES[k].name.replace('The ', '')}</button>`).join('') + '<button data-atlas="true" title="Open your private underworld atlas">🗺 Atlas</button>';
 }
-$('#travel').addEventListener('click', e => { const k = e.target.closest('button')?.dataset.go; if (k){ goTo(PLACES[k].ring.clone(), k); } });
+$('#travel').addEventListener('click', e => { const button = e.target.closest('button'); if (button?.dataset.atlas){ show('atlas'); return; } const k = button?.dataset.go; if (k){ goTo(PLACES[k].ring.clone(), k); } });
 let pendingOpen = null;
 function goTo(v, openKey){ moveTarget.copy(v); hasTarget = true; marker.visible = true; marker.position.set(v.x, .07, v.z); pendingOpen = openKey || null; audio.chime(); }
-function show(id){ closeAll(); const p = document.getElementById(id); if (!p) return; p.hidden = false; openPanel = id; if (id === 'p-ledger_shop' && !$('#shop').children.length && window.renderShop) window.renderShop(); }
+function show(id){ closeAll(); const p = document.getElementById(id); if (!p) return; p.hidden = false; openPanel = id; if (id === 'atlas') renderAtlas(); if (id === 'p-ledger_shop' && !$('#shop').children.length && window.renderShop) window.renderShop(); }
 function closeAll(){ document.querySelectorAll('.panel').forEach(p => p.hidden = true); openPanel = null; }
 document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => { if (e.target === p || e.target.classList.contains('x') || e.target.classList.contains('go')) closeAll(); }));
 $('#promptb').addEventListener('click', () => nearPlace && show('p-' + nearPlace));
 $('#helpb').addEventListener('click', () => show('help'));
+$('#atlas-clear-waymark').addEventListener('click', () => { activeWaypoint = null; try { localStorage.removeItem(WORLD_WAYPOINT_KEY); } catch {} updateCompass(); renderAtlas(); toast('Waymark cleared'); });
+$('#atlas-landmarks').addEventListener('click', e => { const button = e.target.closest('button[data-waymark]'); if (!button) return; const target = resolveLandmarkId(button.dataset.waymark); if (!target) return; activeWaypoint = target; try { localStorage.setItem(WORLD_WAYPOINT_KEY, target.id); } catch {} closeAll(); updateCompass(); toast('Waymark set · ' + target.name); });
 $('#qual').addEventListener('click', () => { QUALITY = (QUALITY + 1) % 3; renderScale = 1; localStorage.setItem('g3d_q', QUALITY); applyQuality(); toast(['Graphics: low (fast)', 'Graphics: medium', 'Graphics: high'][QUALITY]); });
 addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); if ((e.key === 'e' || e.key === 'Enter') && nearPlace && !openPanel && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) show('p-' + nearPlace); });
 let toastT; function toast(t){ const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2200); }
@@ -528,7 +531,10 @@ const generatedChunks = new Map();
 let currentChunkKey = '', currentBiomeId = '', enteredUndercroft = false;
 const WORLD_POSITION_KEY = 'g3d_world_position';
 const DISCOVERED_LANDMARKS_KEY = 'g3d_discovered_landmarks';
+const DISCOVERED_BIOMES_KEY = 'g3d_discovered_biomes';
+const WORLD_WAYPOINT_KEY = 'g3d_world_waypoint';
 const chunkQueue = [], pendingChunkKeys = new Set();
+let activeWaypoint = null;
 function chunkKey(x, z){ return x + ',' + z; }
 function addChunkLandmark(root, landmark, x, y, z, accent, key){
   const model = new THREE.Group();
@@ -682,15 +688,67 @@ function removeUndercroftChunk(key, chunk){
   for (let i = solids.length - 1; i >= 0; i--) if (solids[i].chunkKey === key) solids.splice(i, 1);
   generatedChunks.delete(key);
 }
+function readStoredIds(key){
+  try { const saved = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(saved) ? saved.filter(id => typeof id === 'string') : []; } catch { return []; }
+}
+function resolveLandmarkId(id){
+  const match = /^(-?\d+):(-?\d+)$/.exec(String(id || ''));
+  if (!match) return null;
+  const cellX = Number(match[1]), cellZ = Number(match[2]);
+  if (!Number.isSafeInteger(cellX) || !Number.isSafeInteger(cellZ)) return null;
+  const landmark = landmarkForCell(cellX, cellZ);
+  return landmark?.id === id ? landmark : null;
+}
+function rememberBiome(biome){
+  if (SHOT) return;
+  const seen = readStoredIds(DISCOVERED_BIOMES_KEY);
+  if (seen.includes(biome.id)) return;
+  seen.push(biome.id);
+  try { localStorage.setItem(DISCOVERED_BIOMES_KEY, JSON.stringify(seen)); } catch {}
+}
 function announceLandmark(chunk){
   if (!chunk?.landmark || SHOT) return;
-  let seen = [];
-  try { const saved = JSON.parse(localStorage.getItem(DISCOVERED_LANDMARKS_KEY) || '[]'); if (Array.isArray(saved)) seen = saved.filter(id => typeof id === 'string'); } catch {}
+  const seen = readStoredIds(DISCOVERED_LANDMARKS_KEY);
   if (seen.includes(chunk.landmark.id)) return;
   seen.push(chunk.landmark.id);
   try { localStorage.setItem(DISCOVERED_LANDMARKS_KEY, JSON.stringify(seen.slice(-256))); } catch {}
   toast('Discovered ' + chunk.landmark.name + ' · ' + chunk.biome.name);
 }
+function renderAtlas(){
+  const biomes = $('#atlas-biomes'), landmarks = $('#atlas-landmarks');
+  const knownBiomes = new Set(readStoredIds(DISCOVERED_BIOMES_KEY));
+  const ids = [...new Set(readStoredIds(DISCOVERED_LANDMARKS_KEY))];
+  const sites = ids.map(resolveLandmarkId).filter(Boolean);
+  const activeId = activeWaypoint?.id || null;
+  $('#atlas-progress').textContent = knownBiomes.size + ' of ' + UNDERWORLD_BIOMES.length + ' regions · ' + sites.length + ' landmarks mapped';
+  const biomeList = document.createDocumentFragment();
+  for (const biome of UNDERWORLD_BIOMES){
+    if (!knownBiomes.has(biome.id)) continue;
+    const item = document.createElement('span'); item.className = 'atlas-biome'; item.textContent = biome.name;
+    item.style.setProperty('--biome-accent', biome.accent); biomeList.appendChild(item);
+  }
+  if (!biomeList.childNodes.length){ const empty = document.createElement('p'); empty.className = 'dim small'; empty.textContent = 'No regions mapped yet. Travel beyond Lantern Road to begin exploring.'; biomeList.appendChild(empty); }
+  biomes.replaceChildren(biomeList);
+  sites.sort((a,b) => Math.hypot(a.x-wisp.position.x,a.z-wisp.position.z) - Math.hypot(b.x-wisp.position.x,b.z-wisp.position.z));
+  const landmarkList = document.createDocumentFragment();
+  for (const site of sites){
+    const dx = site.x - wisp.position.x, dz = site.z - wisp.position.z, distance = Math.hypot(dx,dz);
+    const bearing = (Math.atan2(dx,-dz) * 180 / Math.PI + 360) % 360;
+    const direction = COMPASS_SHORT_NAMES[Math.round(bearing / 45) % 8];
+    const card = document.createElement('article'); card.className = 'atlas-landmark';
+    const title = document.createElement('strong'); title.textContent = site.name;
+    const biome = UNDERWORLD_BIOMES.find(item => item.id === site.biomeId);
+    const meta = document.createElement('span'); meta.className = 'dim small'; meta.textContent = (biome?.name || 'Unknown region') + ' · ' + direction + ' · ' + Math.round(distance) + ' world units';
+    const grid = document.createElement('span'); grid.className = 'dim small'; grid.textContent = 'Grid ' + (site.x >= 0 ? '+' : '') + Math.round(site.x) + ', ' + (site.z >= 0 ? '+' : '') + Math.round(site.z);
+    const track = document.createElement('button'); track.type = 'button'; track.dataset.waymark = site.id; track.textContent = activeId === site.id ? 'Tracking' : 'Set direction';
+    track.setAttribute('aria-label', (activeId === site.id ? 'Currently tracking ' : 'Set compass direction to ') + site.name);
+    card.append(title, meta, grid, track); landmarkList.appendChild(card);
+  }
+  if (!sites.length){ const empty = document.createElement('p'); empty.className = 'dim small'; empty.textContent = 'No landmarks mapped yet. Named places will appear here as you find them.'; landmarkList.appendChild(empty); }
+  landmarks.replaceChildren(landmarkList);
+  $('#atlas-clear-waymark').disabled = !activeWaypoint;
+}
+
 function saveWorldPosition(){
   if (SHOT) return;
   try { localStorage.setItem(WORLD_POSITION_KEY, JSON.stringify({x:wisp.position.x, z:wisp.position.z})); } catch {}
@@ -719,11 +777,10 @@ function ensureWorldChunks(){
     if (Math.abs(chunk.x - centerX) > CHUNK_UNLOAD_RADIUS || Math.abs(chunk.z - centerZ) > CHUNK_UNLOAD_RADIUS) removeUndercroftChunk(key, chunk);
   }
   const biome = biomeForChunk(centerX, centerZ);
-  announceLandmark(generatedChunks.get(centerKey));
   const radius = Math.hypot(wisp.position.x, wisp.position.z);
-  if (radius > 58 && !enteredUndercroft){ toast('The lantern road opens into ' + biome.name); enteredUndercroft = true; }
-  else if (radius > 58 && currentBiomeId !== biome.id) toast('Entered ' + biome.name);
+  if (radius > 58){ rememberBiome(biome); if (!enteredUndercroft){ toast('The lantern road opens into ' + biome.name); enteredUndercroft = true; } else if (currentBiomeId !== biome.id) toast('Entered ' + biome.name); }
   currentBiomeId = biome.id;
+  announceLandmark(generatedChunks.get(centerKey));
   saveWorldPosition();
 }
 function processChunkQueue(){
@@ -788,8 +845,14 @@ function updateCompass(){
   const index = Math.round(bearing / 45) % 8;
   const rose = $('#compass-rose'); if (rose) rose.style.transform = 'rotate(' + cam.yaw + 'rad)';
   const heading = $('#compass'), label = $('#heading');
-  const shortName = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][index], degrees = Math.round(bearing);
+  const shortName = COMPASS_SHORT_NAMES[index], degrees = Math.round(bearing);
   if (heading && heading._lastHeading !== shortName + ' ' + degrees + '°'){ heading._lastHeading = shortName + ' ' + degrees + '°'; heading.setAttribute('aria-label', 'Compass. Facing ' + HEADING_NAMES[index] + ', ' + degrees + ' degrees.'); if (label) label.textContent = heading._lastHeading; }
+  const marker = $('#waypoint-marker'), caption = $('#waypoint-label');
+  if (!activeWaypoint){ if (marker) marker.hidden = true; if (caption) caption.hidden = true; return; }
+  const dx = activeWaypoint.x - wisp.position.x, dz = activeWaypoint.z - wisp.position.z, distance = Math.hypot(dx,dz);
+  const targetBearing = (Math.atan2(dx,-dz) * 180 / Math.PI + 360) % 360, relative = (targetBearing - bearing + 360) % 360;
+  if (marker){ marker.hidden = false; marker.style.transform = 'rotate(' + relative + 'deg) translateY(-21px)'; }
+  if (caption){ const direction = COMPASS_SHORT_NAMES[Math.round(targetBearing / 45) % 8]; const text = activeWaypoint.name + ' · ' + direction + ' · ' + Math.round(distance) + ' units'; if (caption._lastText !== text){ caption.textContent = text; caption._lastText = text; } caption.hidden = false; }
 }
 function frame(now){
   rafId = 0;
@@ -839,6 +902,7 @@ function frame(now){
     // start Graves near the crypt door; he'll walk to wherever his mind says he is
     if (SHOT){ G.root.position.copy(PLACES[graves.home].stand); wisp.position.copy(PLACES[graves.home].stand).add(new THREE.Vector3(-.6, 1.1, 3.6)); cam.look.copy(wisp.position); cam.yaw = -.5; cam.dist = MOBILE ? 11 : 9; if (/over/.test(location.search)){ wisp.position.set(0, 1.1, 14); cam.look.copy(wisp.position); cam.dist = 34; cam.pitch = .62; cam.yaw = 0; } }
     else { const saved = loadWorldPosition(); if (saved) wisp.position.set(saved.x, groundY(saved.x, saved.z) + 1.1, saved.z); else wisp.position.copy(PLACES[graves.home].ring).add(new THREE.Vector3(0, 1.1, 5)); cam.look.copy(wisp.position); }
+    activeWaypoint = resolveLandmarkId(localStorage.getItem(WORLD_WAYPOINT_KEY));
     setInterval(refresh, 300000);
     window.__g3dReady = true; clearTimeout(window.__g3dFallback);
     applyQuality();
